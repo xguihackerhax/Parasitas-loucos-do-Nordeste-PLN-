@@ -1,0 +1,3776 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Parasitas Loucos do Nordeste V20 (Correção de Bugs Críticos)</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #111;
+            color: #eee;
+            font-family: 'Consolas', monospace;
+            margin: 0;
+            padding-top: 20px;
+            user-select: none;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        html {
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #ffcc00;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px #f00;
+        }
+
+        #production-label {
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        canvas {
+            border: 3px solid #f55;
+            background-color: #000;
+            cursor: crosshair;
+            position: relative;
+        }
+
+        #hud-info,
+        #ammo-display {
+            min-width: 150px;
+        }
+
+        #hud-info {
+            width: 800px;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 1.2em;
+        }
+
+        .controls {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #aaa;
+            text-align: center;
+        }
+
+        #ammo-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* ESTILOS HACK/PAUSA */
+        #hack-menu {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 250px;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            border-left: 3px solid #f00;
+            padding: 20px;
+            color: #fff;
+            z-index: 1000;
+            box-shadow: -5px 0 15px rgba(255, 0, 0, 0.3);
+            display: none;
+        }
+
+        #hack-menu button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+            background-color: #f00;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #hack-menu button:hover {
+            opacity: 0.8;
+        }
+
+        #hack-menu input[type="number"] {
+            width: 90%;
+            margin-bottom: 10px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 5px;
+        }
+
+        #hack-menu label {
+            display: block;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #ddd;
+        }
+
+        #password-input input {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        #password-input input:focus {
+            opacity: 1.0 !important;
+            background-color: #222;
+            color: #fff;
+        }
+
+        #pause-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            z-index: 999;
+            text-align: center;
+            padding-top: 20%;
+            display: none;
+        }
+
+        /* CORREÇÃO: BOSS ALERT - Oculto por padrão, Z-index alto */
+        #boss-alert {
+            position: fixed;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            font-size: 3em;
+            color: red;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            font-weight: bold;
+            display: none;
+            z-index: 1001;
+            text-shadow: 0 0 10px yellow;
+        }
+
+        /* Estilo para o Botão de Reiniciar */
+        #restart-button {
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 30px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            position: absolute;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>PARASITAS LOUCOS DO NORDESTE</h1>
+
+    <div id="record-alert"></div>
+
+    <div id="boss-alert">CUIDADO! O GIGABUCHO ESTÁ CHEGANDO!</div>
+
+    <div id="pause-menu">
+        <h2>⏸️ JOGO PAUSADO ⏸️</h2>
+        <p style="font-size: 1.2em;">Pressione **ESC** para continuar.</p>
+        <div style="margin-top: 40px;">
+            <h3>Acesso ao Menu Hack:</h3>
+            <input type="text" id="pause-password" placeholder="Digite a senha aqui..."
+                style="padding: 10px; width: 250px; background-color: #333; color: white; border: 1px solid #fff; margin-top: 10px;">
+        </div>
+    </div>
+
+    <div id="hack-menu">
+        <button id="close-hack-btn" onclick="playButtonClickSound(); closeHackMenu()"
+            style="position: absolute; top: 10px; right: 10px; background-color: #333; color: #fff; border: 1px solid #f00; padding: 5px 10px; cursor: pointer; font-size: 1.2em;">✕</button>
+        <h3>⚙️ Menu Hack (Acesso Concedido)</h3>
+
+        <h4>Modos Especiais</h4>
+        <button id="god-mode-btn" onclick="playButtonClickSound(); toggleGodMode()">GOD MODE
+            (Invencibilidade)</button><br>
+        <button id="aimbot-btn" onclick="playButtonClickSound(); toggleAimbot()">AIMBOT (Tiro Automático)</button>
+        <button id="infinite-ammo-btn" onclick="playButtonClickSound(); toggleInfiniteAmmo()">MUNIÇÃO INFINITA</button>
+        <button id="immortal-turrets-btn" onclick="playButtonClickSound(); toggleImmortalTurrets()">TORRETAS
+            IMORTAIS</button>
+        <button id="immortal-shield-btn" onclick="playButtonClickSound(); toggleImmortalShield()">ESCUDO
+            IMORTAL</button>
+
+        <hr style="border-top: 1px solid #f00; margin: 10px 0;">
+
+        <h4>Spawn de Parasitas</h4>
+        <button onclick="playButtonClickSound(); spawnSpecificParasite('Common')">Parasita Padrão (200 HP)</button>
+        <button onclick="playButtonClickSound(); spawnHordeGroup('Horde', 5)">Horda x5 (400 HP, Amarelo)</button>
+        <button onclick="playButtonClickSound(); spawnHordeGroup('SuperHorde', 20)">Super Horda x20 (450 HP,
+            Roxo)</button>
+        <button onclick="playButtonClickSound(); spawnSpecificParasite('Giant')">Gigante (1000 HP, Vermelho)</button>
+        <button onclick="playButtonClickSound(); spawnSpecificParasite('Lordzinho')">Lordzinho (500 HP)</button>
+        <button onclick="playButtonClickSound(); spawnSpecificParasite('Boss')">BOSS: GIGABUCHO (5000 HP)</button>
+        <button onclick="playButtonClickSound(); spawnSpecificParasite('Necrolord')">BOSS: NECROLORD (10000 HP)</button>
+        <button onclick="playButtonClickSound(); spawnSpecificParasite('Lagartao')">BOSS: LAGARTÃO (10000 HP)</button>
+
+        <hr style="border-top: 1px solid #f00; margin: 10px 0;">
+
+        <h4>Controle e Trapaças</h4>
+        <label for="zombie-speed">Velocidade Parasitas (30-1000):</label>
+        <input type="number" id="zombie-speed" min="30" max="1000" value="60"
+            onchange="playButtonClickSound(); setParasiteSpeed(this.value)">
+
+        <label for="zombie-max">Máx. Parasitas na Tela (5-1000):</label>
+        <input type="number" id="zombie-max" min="5" max="1000" value="5"
+            onchange="playButtonClickSound(); setMaxParasites(this.value)">
+
+        <button onclick="playButtonClickSound(); addScore(50000)">+50000 Pontos</button>
+    </div>
+
+    <div id="password-input">
+        <input type="text" id="password" placeholder="Digite a senha para o Menu Hack...">
+    </div>
+
+    <div id="hud-info">
+        <div>SCORE: <span id="score-display">0</span></div>
+        <div>RECORDE: <span id="high-score-display">0</span></div>
+        <div id="ammo-display"></div>
+        <div>TIME: <span id="time-display">00:00</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div id="restart-container" style="pointer-events: none;"></div>
+
+    <!-- Botões de Paralisador, Escudo e Torreta na ESQUERDA -->
+    <div id="action-buttons"
+        style="position: fixed; left: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 100;">
+        <button id="paralyzer-btn" onclick="useParalyzer()"
+            style="width: 80px; height: 60px; background: linear-gradient(145deg, #9933ff, #6600cc); color: white; border: 2px solid #cc66ff; border-radius: 10px; font-weight: bold; font-size: 11px; cursor: pointer; box-shadow: 0 0 10px #9933ff;">
+            PARALISAR<br><span id="paralyzer-count">0</span>
+        </button>
+        <button id="shield-btn" onclick="useShield()"
+            style="width: 80px; height: 60px; background: linear-gradient(145deg, #ff3333, #cc0000); color: white; border: 2px solid #ff6666; border-radius: 10px; font-weight: bold; font-size: 11px; cursor: pointer; box-shadow: 0 0 10px #ff0000;">
+            ESCUDO<br><span id="shield-count">0</span>
+        </button>
+        <button id="turret-btn" onclick="placingTurret = !placingTurret; playButtonClickSound();"
+            style="width: 80px; height: 60px; background: linear-gradient(145deg, #ff6600, #cc3300); color: white; border: 2px solid #ff9933; border-radius: 10px; font-weight: bold; font-size: 11px; cursor: pointer; box-shadow: 0 0 10px #ff6600;">
+            TORRETA<br><span id="turret-count">0</span>
+        </button>
+    </div>
+
+    <!-- Controles de Áudio -->
+    <div id="audio-controls"
+        style="position: fixed; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 100; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 10px;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+            <label style="font-size: 10px; color: #fff;">VOLUME MASTER</label>
+            <input type="range" id="master-volume-slider" min="0" max="1" step="0.01" value="0.5" 
+                   oninput="masterVolume = parseFloat(this.value); if(bgMusic) bgMusic.volume = musicVolume * masterVolume;" 
+                   style="width: 80px; cursor: pointer;">
+        </div>
+        <button id="mute-music-btn" onclick="toggleMuteMusic()"
+            style="width: 80px; height: 30px; background: linear-gradient(145deg, #333, #111); color: white; border: 2px solid #666; border-radius: 5px; font-size: 10px; cursor: pointer;">
+            MÚSICA: ON
+        </button>
+        <button id="manual-btn" onclick="toggleManual()"
+            style="width: 80px; height: 30px; background: linear-gradient(145deg, #0066cc, #004499); color: white; border: 2px solid #3399ff; border-radius: 5px; font-size: 10px; cursor: pointer;">
+            MANUAL
+        </button>
+    </div>
+    <!-- Manual do Jogo -->
+    <div id="manual-menu"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 2000; overflow-y: auto; padding: 20px; box-sizing: border-box;">
+        <div style="max-width: 800px; margin: 0 auto; color: #fff; font-family: Consolas, monospace;">
+            <button onclick="toggleManual()"
+                style="position: fixed; top: 20px; right: 30px; background-color: #f00; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 1.2em; border-radius: 5px;">FECHAR</button>
+
+            <h1 style="color: #ffcc00; text-shadow: 2px 2px #f00; text-align: center;">MANUAL DO JOGO</h1>
+
+            <h2 style="color: #ff6600; border-bottom: 2px solid #ff6600; padding-bottom: 5px;">CONTROLES</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>WASD / Setas</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Movimentar Jogador</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>Mouse</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Mirar e Atirar (clique esquerdo)</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>1-9</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Trocar de arma</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>R</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Recarregar arma</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>Shift</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Alternar modo da Glock (Semi/Burst)</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>T</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Colocar torreta / Desativar modo torreta</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>G</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Alternar tipo de munição da torreta</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>Y</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Remover torreta próxima</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>P</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Usar paralisador</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;"><b>ESC</b></td>
+                    <td style="padding: 8px; border: 1px solid #444;">Pausar jogo</td>
+                </tr>
+            </table>
+
+            <h2 style="color: #00ff00; border-bottom: 2px solid #00ff00; padding-bottom: 5px;">ARMAS</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #333; color: #ffcc00;">
+                    <th style="padding: 8px; border: 1px solid #444;">Tecla</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Arma</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Dano</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Pente</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Descrição</th>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">1</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Glock</td>
+                    <td style="padding: 8px; border: 1px solid #444;">50</td>
+                    <td style="padding: 8px; border: 1px solid #444;">15</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Pistola semi-automática, modo burst disponível
+                    </td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">2</td>
+                    <td style="padding: 8px; border: 1px solid #444;">M4</td>
+                    <td style="padding: 8px; border: 1px solid #444;">35</td>
+                    <td style="padding: 8px; border: 1px solid #444;">30</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Rifle de assalto automático</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">3</td>
+                    <td style="padding: 8px; border: 1px solid #444;">AWM</td>
+                    <td style="padding: 8px; border: 1px solid #444;">500</td>
+                    <td style="padding: 8px; border: 1px solid #444;">5</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Sniper de alto dano, tiro único</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">4</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Minigun</td>
+                    <td style="padding: 8px; border: 1px solid #444;">25</td>
+                    <td style="padding: 8px; border: 1px solid #444;">200</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Metralhadora de alta cadência</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">5</td>
+                    <td style="padding: 8px; border: 1px solid #444;">RPG</td>
+                    <td style="padding: 8px; border: 1px solid #444;">300</td>
+                    <td style="padding: 8px; border: 1px solid #444;">3</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Lança-foguetes com explosão em área</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">6</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Espingarda</td>
+                    <td style="padding: 8px; border: 1px solid #444;">40x8</td>
+                    <td style="padding: 8px; border: 1px solid #444;">8</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Dispara 8 projéteis por tiro</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">7</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Laser</td>
+                    <td style="padding: 8px; border: 1px solid #444;">50/tick</td>
+                    <td style="padding: 8px; border: 1px solid #444;">100</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Feixe contínuo de dano</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">8</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Lança-Chamas</td>
+                    <td style="padding: 8px; border: 1px solid #444;">15/tick</td>
+                    <td style="padding: 8px; border: 1px solid #444;">150</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Jato de fogo contínuo</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; text-align: center;">9</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Nuke</td>
+                    <td style="padding: 8px; border: 1px solid #444;">2000</td>
+                    <td style="padding: 8px; border: 1px solid #444;">1</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Explosão nuclear massiva (cooldown 30s)</td>
+                </tr>
+            </table>
+
+            <h2 style="color: #ff3333; border-bottom: 2px solid #ff3333; padding-bottom: 5px;">PARASITAS</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #333; color: #ffcc00;">
+                    <th style="padding: 8px; border: 1px solid #444;">Tipo</th>
+                    <th style="padding: 8px; border: 1px solid #444;">HP</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Pontos</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Cor</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Descrição</th>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;">Padrão</td>
+                    <td style="padding: 8px; border: 1px solid #444;">200</td>
+                    <td style="padding: 8px; border: 1px solid #444;">100</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #33cc33;">Verde</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Inimigo comum</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444;">Horda</td>
+                    <td style="padding: 8px; border: 1px solid #444;">400</td>
+                    <td style="padding: 8px; border: 1px solid #444;">200</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #ffcc00;">Amarelo</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Aparece em grupos</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;">Super Horda</td>
+                    <td style="padding: 8px; border: 1px solid #444;">450</td>
+                    <td style="padding: 8px; border: 1px solid #444;">200</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #9933ff;">Roxo</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Horda mais forte e rápida</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444;">Runner</td>
+                    <td style="padding: 8px; border: 1px solid #444;">310</td>
+                    <td style="padding: 8px; border: 1px solid #444;">100</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #3399ff;">Azul</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Muito rápido</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;">Slow</td>
+                    <td style="padding: 8px; border: 1px solid #444;">800</td>
+                    <td style="padding: 8px; border: 1px solid #444;">100</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #8B4513;">Marrom</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Lento mas resistente</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444;">Gigante</td>
+                    <td style="padding: 8px; border: 1px solid #444;">1000</td>
+                    <td style="padding: 8px; border: 1px solid #444;">500</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #cc3333;">Vermelho</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Grande e resistente</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444;">Lordzinho</td>
+                    <td style="padding: 8px; border: 1px solid #444;">500</td>
+                    <td style="padding: 8px; border: 1px solid #444;">100</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #8B0000;">Vermelho Escuro</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Rápido, sangra ao andar</td>
+                </tr>
+            </table>
+
+            <h2 style="color: #ff00ff; border-bottom: 2px solid #ff00ff; padding-bottom: 5px;">BOSSES</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #333; color: #ffcc00;">
+                    <th style="padding: 8px; border: 1px solid #444;">Boss</th>
+                    <th style="padding: 8px; border: 1px solid #444;">HP</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Pontos</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Recompensa</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Spawn</th>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; color: cyan;">GIGABUCHO</td>
+                    <td style="padding: 8px; border: 1px solid #444;">5000</td>
+                    <td style="padding: 8px; border: 1px solid #444;">5000</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff00ff;">+5 Paralisadores</td>
+                    <td style="padding: 8px; border: 1px solid #444;">A cada 60s</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff0000;">NECROLORD</td>
+                    <td style="padding: 8px; border: 1px solid #444;">10000</td>
+                    <td style="padding: 8px; border: 1px solid #444;">10000</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #00ff00;">+10 Torretas</td>
+                    <td style="padding: 8px; border: 1px solid #444;">A cada 120s</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #00ff00;">LAGARTÃO</td>
+                    <td style="padding: 8px; border: 1px solid #444;">10000</td>
+                    <td style="padding: 8px; border: 1px solid #444;">10000</td>
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff0000;">+10 Escudos</td>
+                    <td style="padding: 8px; border: 1px solid #444;">A cada 180s</td>
+                </tr>
+            </table>
+
+            <h2 style="color: #ff6600; border-bottom: 2px solid #ff6600; padding-bottom: 5px;">ITENS ESPECIAIS</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #333; color: #ffcc00;">
+                    <th style="padding: 8px; border: 1px solid #444;">Item</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Efeito</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Como Obter</th>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff00ff;">Paralisador</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Paralisa todos os parasitas por 10 segundos</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Mate o GIGABUCHO (+5)</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff0000;">Escudo</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Protege com 5000 HP, causa 5000 de dano em contato
+                    </td>
+                    <td style="padding: 8px; border: 1px solid #444;">Mate o LAGARTÃO (+10)</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff6600;">Torreta</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Atira automaticamente nos parasitas (1000 HP)</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Mate o NECROLORD (+10)</td>
+                </tr>
+            </table>
+
+            <h2 style="color: #00ffff; border-bottom: 2px solid #00ffff; padding-bottom: 5px;">TIPOS DE TORRETA</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #333; color: #ffcc00;">
+                    <th style="padding: 8px; border: 1px solid #444;">Tipo</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Dano</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Cadência</th>
+                    <th style="padding: 8px; border: 1px solid #444;">Especial</th>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff5555;">Minigun</td>
+                    <td style="padding: 8px; border: 1px solid #444;">30</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Muito Alta</td>
+                    <td style="padding: 8px; border: 1px solid #444;">-</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #ffff00;">RPG</td>
+                    <td style="padding: 8px; border: 1px solid #444;">300</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Baixa</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Explosivo</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff4500;">Lança-Chamas</td>
+                    <td style="padding: 8px; border: 1px solid #444;">100</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Alta</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Área de efeito</td>
+                </tr>
+                <tr style="background: #1a1a1a;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #00ffff;">Stun</td>
+                    <td style="padding: 8px; border: 1px solid #444;">5</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Baixa</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Paralisa por 3s</td>
+                </tr>
+                <tr style="background: #222;">
+                    <td style="padding: 8px; border: 1px solid #444; color: #ff00ff;">Laser</td>
+                    <td style="padding: 8px; border: 1px solid #444;">80</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Alta</td>
+                    <td style="padding: 8px; border: 1px solid #444;">Projétil rápido</td>
+                </tr>
+            </table>
+
+            <h2 style="color: #ffcc00; border-bottom: 2px solid #ffcc00; padding-bottom: 5px;">DICAS</h2>
+            <ul style="line-height: 1.8; color: #ddd;">
+                <li>Use a <b>AWM</b> para eliminar bosses rapidamente com headshots</li>
+                <li>O <b>RPG</b> e a <b>Nuke</b> são ótimos contra hordas</li>
+                <li>Posicione <b>torretas</b> estrategicamente - elas atraem inimigos!</li>
+                <li>O <b>escudo</b> causa dano massivo em contato - use contra bosses</li>
+                <li>Guarde <b>paralisadores</b> para emergências</li>
+                <li>Máximo de <b>10 torretas</b> ativas ao mesmo tempo</li>
+                <li><b>Headshots</b> causam dano dobrado (+50 pontos bônus)</li>
+            </ul>
+
+            <p style="text-align: center; color: #666; margin-top: 30px;">GUILHERME JOGOS PRODUCTIONS</p>
+            <p id="password-hint"
+                style="text-align: center; font-size: 0.8em; margin-top: 20px; animation: colorChange 2s infinite;">Dica
+                da senha do menu hack: ano que o criador nasceu</p>
+            <style>
+                @keyframes colorChange {
+                    0% {
+                        color: #ff0000;
+                    }
+
+                    16% {
+                        color: #ff7f00;
+                    }
+
+                    33% {
+                        color: #ffff00;
+                    }
+
+                    50% {
+                        color: #00ff00;
+                    }
+
+                    66% {
+                        color: #0000ff;
+                    }
+
+                    83% {
+                        color: #8b00ff;
+                    }
+
+                    100% {
+                        color: #ff0000;
+                    }
+                }
+            </style>
+        </div>
+    </div>
+
+    <div id="production-label">
+        GUILHERME JOGOS PRODUCTIONS
+    </div>
+
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const WIDTH = canvas.width;
+        const HEIGHT = canvas.height;
+        // 1. RE-DECLARAÇÃO COMO LET (Para permitir movimento)
+        window.PLAYER_CENTER_X = 400; //WIDTH/2
+        window.PLAYER_CENTER_Y = 300; //HEIGHT/2
+        const playerMoveSpeed = 5;
+        const keys = {};
+
+        // 2. ESCUTAR AS TECLAS
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // 3. FUNÇÃO DE MOVIMENTO (WASD)
+        function updateMovement() {
+            if (typeof gameState !== 'undefined' && gameState === 'PLAYING') {
+                if (keys['KeyW']) PLAYER_CENTER_Y -= playerMoveSpeed;
+                if (keys['KeyS']) PLAYER_CENTER_Y += playerMoveSpeed;
+                if (keys['KeyA']) PLAYER_CENTER_X -= playerMoveSpeed;
+                if (keys['KeyD']) PLAYER_CENTER_X += playerMoveSpeed;
+
+                // Limites da tela para não sair do canvas
+                PLAYER_CENTER_X = Math.max(25, Math.min(775, PLAYER_CENTER_X));
+                PLAYER_CENTER_Y = Math.max(25, Math.min(575, PLAYER_CENTER_Y));
+            }
+        }
+
+        // 4. ATUALIZAÇÃO DA MIRA (MUITO IMPORTANTE)
+        // Substitui o cálculo fixo para a mira seguir o boneco onde ele for
+        window.addEventListener('mousemove', (e) => {
+            if (typeof canvas !== 'undefined') {
+                const rect = canvas.getBoundingClientRect();
+                const mX = e.clientX - rect.left;
+                const mY = e.clientY - rect.top;
+                angle = Math.atan2(mY - PLAYER_CENTER_Y, mX - PLAYER_CENTER_X);
+            }
+        });
+
+        // 5. RODAR O MOVIMENTO
+        setInterval(updateMovement, 1000 / 60);
+
+        let lastTime = 0;
+        let gameTime = 0;
+        let gameState = 'PLAYING';
+
+        // === CONFIGURAÇÃO DE JOGO E HACK ===
+        const PLAYER_SIZE = 15;
+        const PLAYER_COLOR = '#B38B6D'; // Cor de pele
+        const PARASITE_SIZE = 20;
+        const PARASITE_GIGANTE_SIZE = 40;
+        const PARASITE_BOSS_SIZE = 60;
+        let PLAYER_REACH_DIST = 40;
+        const RPG_EXPLOSION_RADIUS = 120;
+        const SECRET_PASSWORD = "2012";
+        const RECORD_ALERT_DURATION = 5.0;
+        const BOSS_ALERT_DURATION = 3.0;
+
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('highScore') || 0);
+        let totalDamage = 0;
+        let parasites = [];
+        let maxParasites = 5;
+        let spawnRate = 2;
+        let spawnTimer = 0;
+        let spawnCount = 0;
+        const HORDE_SPAWN_AT = [3, 6, 10];
+        let floatingTexts = [];
+        let projectiles = [];
+        let bigShotEffect = null;
+        let bigLaserBeam = null; // Para o feixe gigante do laser
+        let confetti = [];
+        let recordAlertTimer = 0;
+        let bossAlertTimer = 0;
+        let bossSpawnTimer = 0;
+        const BOSS_SPAWN_INTERVAL = 60;
+        let necrolordSpawnTimer = 0;
+        const NECROLORD_SPAWN_INTERVAL = 120; // 2 minutos
+        let necrolordAlertShown = false;
+        let bloodParticles = [];
+        let debrisParticles = [];
+
+       canvas.addEventListener('wheel', handleMouseWheel);
+	   function handleMouseWheel(e) {
+    e.preventDefault();
+    const weaponIds = Object.keys(BASE_WEAPONS).sort((a, b) => parseInt(a) - parseInt(b));
+    let idx = weaponIds.indexOf(currentWeaponId);
+    if (e.deltaY < 0) {
+        idx = (idx + 1) % weaponIds.length;
+    } else if (e.deltaY > 0) {
+        idx = (idx - 1 + weaponIds.length) % weaponIds.length;
+    }
+    switchWeapon(weaponIds[idx]);
+}
+
+        // HACK/CHEAT CONTROLS
+        let isGodMode = false;
+        let isAimbot = false;
+        let isInfiniteAmmo = false;
+        let isImmortalTurrets = false;
+        let isImmortalShield = false;
+        let aimbotTimer = 0;
+        const AIMBOT_RATE = 0.15;
+        let currentParasiteSpeed = 60;
+        let currentGiantSpeed = 30;
+
+        // === SISTEMA DE TORRETAS ===
+        let turrets = [];
+        let turretAmmoType = 'minigun'; // 'rpg', 'minigun', 'flamethrower', 'stun', 'laser'
+        const TURRET_AMMO_TYPES = ['minigun', 'rpg', 'flamethrower', 'stun', 'laser'];
+        const MAX_TURRETS = 10;
+        let placingTurret = false;
+        let playerTurretCount = 0; // Começa com 0, ganha 5 ao matar Necrolord
+
+        // === NOVO BOSS LAGARTÃO ===
+        let lagartaoSpawnTimer = 0;
+        const LAGARTAO_SPAWN_INTERVAL = 180; // 3 minutos
+        let lagartaoAlertShown = false;
+        let playerFireRateDebuff = 1.0; // 1.0 = normal, 0.9 = 10% mais lento
+        let fireRateDebuffTimer = 0;
+
+        // === CONTROLE DE ÁUDIO ===
+        let masterVolume = 0.5;
+        let effectsVolume = 0.5; // 0.0 a 1.0
+        let isMusicMuted = false;
+
+        // === SISTEMA DE ESCUDO E PARALISADOR ===
+        let playerShield = 0; // HP atual do escudo ativo
+        const MAX_SHIELD_HP = 5000;
+        let playerShieldCount = 0; // Começa com 0 escudos
+        let shieldDamageCooldown = 0; // Cooldown para evitar dano múltiplo por frame
+        let parasitesParalyzed = false;
+        let paralyzeTimer = 0;
+        const PARALYZE_DURATION = 10; // 10 segundos
+        let playerParalyzers = 0; // Começa com 0 paralizadores
+
+        // === SISTEMA DE AUDIO ===
+        let audioContext = null;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        let bgMusicPlaying = false;
+        let bgMusicNodes = [];
+
+        function playBackgroundMusic() {
+            // SE O MUTE ESTIVER ATIVADO, PARA AQUI E NÃO TOCA NADA
+            if (isMusicMuted) return;
+
+            if (bgMusicPlaying) return;
+            initAudio();
+            if (!audioContext) return;
+
+            bgMusicPlaying = true;
+
+            const masterGain = audioContext.createGain();
+            masterGain.gain.setValueAtTime(0.15, audioContext.currentTime);
+            masterGain.connect(audioContext.destination);
+
+            const bassNotes = [55, 55, 73.42, 55, 82.41, 55, 73.42, 55];
+            const melodyNotes = [220, 293.66, 329.63, 293.66, 349.23, 329.63, 293.66, 220];
+            const noteDuration = 0.25;
+            const loopDuration = bassNotes.length * noteDuration;
+
+            function scheduleLoop() {
+                if (!bgMusicPlaying) return;
+
+                const now = audioContext.currentTime;
+
+                for (let i = 0; i < bassNotes.length; i++) {
+                    const bassOsc = audioContext.createOscillator();
+                    const bassGain = audioContext.createGain();
+                    bassOsc.type = 'sawtooth';
+                    bassOsc.frequency.setValueAtTime(bassNotes[i], now + i * noteDuration);
+                    bassGain.gain.setValueAtTime(0.3, now + i * noteDuration);
+                    bassGain.gain.exponentialRampToValueAtTime(0.01, now + (i + 0.9) * noteDuration);
+                    bassOsc.connect(bassGain);
+                    bassGain.connect(masterGain);
+                    bassOsc.start(now + i * noteDuration);
+                    bassOsc.stop(now + (i + 1) * noteDuration);
+                    bgMusicNodes.push(bassOsc);
+
+                    const melodyOsc = audioContext.createOscillator();
+                    const melodyGain = audioContext.createGain();
+                    melodyOsc.type = 'square';
+                    melodyOsc.frequency.setValueAtTime(melodyNotes[i], now + i * noteDuration);
+                    melodyGain.gain.setValueAtTime(0.1, now + i * noteDuration);
+                    melodyGain.gain.exponentialRampToValueAtTime(0.01, now + (i + 0.8) * noteDuration);
+                    melodyOsc.connect(melodyGain);
+                    melodyGain.connect(masterGain);
+                    melodyOsc.start(now + i * noteDuration);
+                    melodyOsc.stop(now + (i + 1) * noteDuration);
+                    bgMusicNodes.push(melodyOsc);
+
+                    if (i % 2 === 0) {
+                        const kickOsc = audioContext.createOscillator();
+                        const kickGain = audioContext.createGain();
+                        kickOsc.type = 'sine';
+                        kickOsc.frequency.setValueAtTime(150, now + i * noteDuration);
+                        kickOsc.frequency.exponentialRampToValueAtTime(30, now + i * noteDuration + 0.1);
+                        kickGain.gain.setValueAtTime(0.5, now + i * noteDuration);
+                        kickGain.gain.exponentialRampToValueAtTime(0.01, now + i * noteDuration + 0.15);
+                        kickOsc.connect(kickGain);
+                        kickGain.connect(masterGain);
+                        kickOsc.start(now + i * noteDuration);
+                        kickOsc.stop(now + i * noteDuration + 0.2);
+                        bgMusicNodes.push(kickOsc);
+                    }
+
+                    if (i % 2 === 1) {
+                        const hihatOsc = audioContext.createOscillator();
+                        const hihatGain = audioContext.createGain();
+                        const hihatFilter = audioContext.createBiquadFilter();
+                        hihatOsc.type = 'square';
+                        hihatOsc.frequency.setValueAtTime(8000, now + i * noteDuration);
+                        hihatFilter.type = 'highpass';
+                        hihatFilter.frequency.setValueAtTime(7000, now + i * noteDuration);
+                        hihatGain.gain.setValueAtTime(0.05, now + i * noteDuration);
+                        hihatGain.gain.exponentialRampToValueAtTime(0.001, now + i * noteDuration + 0.05);
+                        hihatOsc.connect(hihatFilter);
+                        hihatFilter.connect(hihatGain);
+                        hihatGain.connect(masterGain);
+                        hihatOsc.start(now + i * noteDuration);
+                        hihatOsc.stop(now + i * noteDuration + 0.1);
+                        bgMusicNodes.push(hihatOsc);
+                    }
+                }
+
+                bgMusicLoopId = setTimeout(scheduleLoop, loopDuration * 1000 - 50);
+            }
+
+            scheduleLoop();
+        }
+
+        let bgMusicLoopId = null;
+
+        function stopBackgroundMusic() {
+            bgMusicPlaying = false;
+            if (bgMusicLoopId) {
+                clearTimeout(bgMusicLoopId);
+                bgMusicLoopId = null;
+            }
+            bgMusicNodes.forEach(node => {
+                try {node.stop();} catch (e) { }
+            });
+            bgMusicNodes = [];
+        }
+
+        function playShootSound(weaponName) {
+            initAudio();
+            if (!audioContext) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const noiseFilter = audioContext.createBiquadFilter();
+
+            // Master gain para controle de volume de efeitos
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            oscillator.connect(noiseFilter);
+            noiseFilter.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            switch (weaponName) {
+                case 'Glock':
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(150, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    gainNode.gain.setValueAtTime(0.3, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(1000, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.1);
+                    break;
+
+                case 'M4':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(200, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+                    gainNode.gain.setValueAtTime(0.25, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(1500, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.08);
+                    break;
+
+                case 'AWM':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(80, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+                    gainNode.gain.setValueAtTime(0.5, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(800, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.3);
+                    break;
+
+                case 'Minigun':
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(300, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.03);
+                    gainNode.gain.setValueAtTime(0.15, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.03);
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(2000, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.03);
+                    break;
+
+                case 'RPG':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(60, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(20, now + 0.5);
+                    gainNode.gain.setValueAtTime(0.6, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(500, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.5);
+                    break;
+
+                case 'Espingarda':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(120, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+                    gainNode.gain.setValueAtTime(0.5, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(600, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.2);
+                    break;
+
+                case 'Laser':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(2000, now);
+                    oscillator.frequency.linearRampToValueAtTime(2500, now + 0.05);
+                    oscillator.frequency.linearRampToValueAtTime(1800, now + 0.1);
+                    oscillator.frequency.linearRampToValueAtTime(2200, now + 0.15);
+                    gainNode.gain.setValueAtTime(0.12, now); // Volume normal (aumentado)
+                    gainNode.gain.linearRampToValueAtTime(0.1, now + 0.15);
+                    noiseFilter.type = 'highpass';
+                    noiseFilter.frequency.setValueAtTime(1500, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.15);
+                    break;
+
+                case 'Lança-Chamas':
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(100, now);
+                    oscillator.frequency.linearRampToValueAtTime(200, now + 0.1);
+                    oscillator.frequency.linearRampToValueAtTime(80, now + 0.3);
+                    oscillator.frequency.linearRampToValueAtTime(150, now + 0.5);
+                    gainNode.gain.setValueAtTime(0.4, now);
+                    gainNode.gain.linearRampToValueAtTime(0.5, now + 0.2);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(400, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.5);
+                    break;
+
+                default:
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(150, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    gainNode.gain.setValueAtTime(0.3, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    noiseFilter.type = 'lowpass';
+                    noiseFilter.frequency.setValueAtTime(1000, now);
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.1);
+            }
+        }
+
+        function playExplosionSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(100, now);
+            oscillator.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+            gainNode.gain.setValueAtTime(0.6, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+            oscillator.start(now);
+            oscillator.stop(now + 0.4);
+        }
+
+        function playBigLaserSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc1 = audioContext.createOscillator();
+            const osc2 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(200, now);
+            osc1.frequency.linearRampToValueAtTime(800, now + 0.3);
+            osc1.frequency.linearRampToValueAtTime(100, now + 0.6);
+
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(400, now);
+            osc2.frequency.linearRampToValueAtTime(1600, now + 0.3);
+            osc2.frequency.linearRampToValueAtTime(200, now + 0.6);
+
+            gainNode.gain.setValueAtTime(0.4, now);
+            gainNode.gain.linearRampToValueAtTime(0.6, now + 0.2);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.6);
+            osc2.stop(now + 0.6);
+        }
+
+        function playGameOverSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            osc.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+            osc.frequency.setValueAtTime(300, now + 0.4);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.8);
+
+            gainNode.gain.setValueAtTime(0.4, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+
+            osc.start(now);
+            osc.stop(now + 0.8);
+        }
+
+        function playButtonClickSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            osc.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.05);
+
+            gainNode.gain.setValueAtTime(0.2, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+            osc.start(now);
+            osc.stop(now + 0.05);
+        }
+
+        function playHackMenuSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            osc.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(800, now + 0.1);
+            osc.frequency.linearRampToValueAtTime(400, now + 0.2);
+            osc.frequency.linearRampToValueAtTime(1200, now + 0.3);
+
+            gainNode.gain.setValueAtTime(0.2, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+
+        function playWeaponSwitchSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            osc.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.linearRampToValueAtTime(600, now + 0.08);
+
+            gainNode.gain.setValueAtTime(0.25, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+            osc.start(now);
+            osc.stop(now + 0.08);
+        }
+
+        function playHordeSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            osc.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(300, now + 0.2);
+            osc.frequency.linearRampToValueAtTime(150, now + 0.4);
+            osc.frequency.linearRampToValueAtTime(300, now + 0.6);
+
+            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+            osc.start(now);
+            osc.stop(now + 0.6);
+        }
+
+        function playSuperHordeSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc1 = audioContext.createOscillator();
+            const osc2 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume, audioContext.currentTime);
+
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(100, now);
+            osc1.frequency.linearRampToValueAtTime(400, now + 0.3);
+            osc1.frequency.linearRampToValueAtTime(100, now + 0.6);
+            osc1.frequency.linearRampToValueAtTime(500, now + 0.9);
+
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(200, now);
+            osc2.frequency.linearRampToValueAtTime(600, now + 0.3);
+
+            gainNode.gain.setValueAtTime(0.35, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.9);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.9);
+            osc2.stop(now + 0.9);
+        }
+
+        function playBossSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc1 = audioContext.createOscillator();
+            const osc2 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(80, now);
+            osc1.frequency.linearRampToValueAtTime(200, now + 0.5);
+            osc1.frequency.linearRampToValueAtTime(60, now + 1.0);
+            osc1.frequency.linearRampToValueAtTime(250, now + 1.5);
+
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(40, now);
+            osc2.frequency.linearRampToValueAtTime(100, now + 0.5);
+
+            gainNode.gain.setValueAtTime(0.5, now);
+            gainNode.gain.linearRampToValueAtTime(0.6, now + 0.5);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 1.5);
+            osc2.stop(now + 1.5);
+        }
+
+        function playZombieDamageSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200 + Math.random() * 100, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.06);
+
+            gainNode.gain.setValueAtTime(0.15, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+
+            osc.start(now);
+            osc.stop(now + 0.06);
+        }
+
+        function playZombieDeathSound() {
+            initAudio();
+            if (!audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            const now = audioContext.currentTime;
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
+
+            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+            osc.start(now);
+            osc.stop(now + 0.25);
+        }
+
+        let laserSoundPlaying = false;
+
+        // LASER CONTROLS
+        let isLaserFiring = false;
+        let isLeftMouseDown = false;
+        const LASER_DPS = 1000;
+        let laserHitTimer = 0;
+        const LASER_HIT_RATE = 0.05;
+        let laserAmmoTimer = 0;
+        const LASER_AMMO_RATE = 0.1; // Gasta 1 de munição a cada 0.1 segundos (10 por segundo)
+
+        // GLOCK MODE
+        let glockMode = 'semi';
+        let burstShotsRemaining = 0;
+        const BURST_SHOTS = 5;
+        const BURST_INTERVAL = 0.08;
+        let burstTimer = 0;
+        let isScoped = false;
+        let mousePos = {x: PLAYER_CENTER_X, y: PLAYER_CENTER_Y};
+
+        // --- 1. ARMAS ---
+        const BASE_WEAPONS = {
+            '1': {name: 'Glock', damage: 55, rate: 0.2, mag: 15, total: 90, scope: false, color: '#aaa', reloadTime: 1.0, type: 'bullet'},
+            '2': {name: 'M4', damage: 100, rate: 0.1, mag: 30, total: 150, scope: false, color: '#bbb', reloadTime: 1.0, type: 'bullet'},
+            '3': {name: 'AWM', damage: 300, rate: 0.5, mag: 5, total: 25, scope: false, color: '#5f5', reloadTime: 1.0, type: 'bullet'},
+            '4': {name: 'Minigun', damage: 60, rate: 0.02, mag: 200, total: 400, scope: false, color: '#f55', reloadTime: 1.5, type: 'bullet'},
+            '5': {name: 'RPG', damage: 380, rate: 0.8, mag: 1, total: 5, scope: false, color: '#ff0', reloadTime: 1.0, type: 'explosive', projectileSpeed: 400},
+            '6': {name: 'Espingarda', damage: 100, rate: 0.4, mag: 20, total: 40, scope: false, color: '#ff8800', reloadTime: 1.0, type: 'shotgun', pellets: 4},
+            '7': {name: 'Laser', damage: 0, rate: 0, mag: 1000, total: 2000, scope: false, color: '#f00', reloadTime: 1.0, type: 'laser', bigShotDamage: 500},
+            '8': {name: 'Nuke', damage: 2000, rate: 0, mag: 5, total: 5, scope: false, color: '#ff00ff', reloadTime: 0, type: 'nuke'},
+            '9': {name: 'Lança-Chamas', damage: 80, rate: 0.05, mag: 200, total: 400, scope: false, color: '#ff4500', reloadTime: 2.0, type: 'flamethrower'}
+        };
+
+        let nukeCooldown = 0;
+        const NUKE_COOLDOWN_TIME = 30;
+        let nukeEffect = null;
+
+        // FLAMETHROWER CONTROLS
+        let isFlamethrowerFiring = false;
+        let flameParticles = [];
+        const FLAME_DPS = 10;
+        let flameHitTimer = 0;
+        const FLAME_HIT_RATE = 0.05;
+        let flameAmmoTimer = 0;
+        const FLAME_AMMO_RATE = 0.1;
+        let flameSoundTimer = 0;
+
+        let currentWeaponId = '1';
+        let currentWeapon;
+        let shotCooldown = 0;
+        let reloadTimer = 0;
+        let isReloading = false;
+        let initialWeaponsState = JSON.parse(JSON.stringify(BASE_WEAPONS));
+
+        function initializeWeapons() {
+            const state = JSON.parse(JSON.stringify(initialWeaponsState));
+            for (const id in state) {
+                const base = state[id];
+                base.ammo = {mag: base.mag, total: base.total};
+                // CORREÇÃO 3: Atualiza o BASE_WEAPONS com o estado inicial e ammo
+                BASE_WEAPONS[id] = base;
+            }
+            switchWeapon('1');
+        }
+
+        // --- CORREÇÃO 1: CLASSE PARASITE (Reinclusão completa) ---
+        class Parasite {
+            constructor(type) {
+                this.type = type;
+                this.isGiant = type === 'Giant';
+                this.isHorde = type === 'Horde';
+                this.isBoss = type === 'Boss';
+                this.isRunner = type === 'Runner';
+                this.isSlow = type === 'Slow';
+                this.isNecrolord = type === 'Necrolord';
+                this.isLordzinho = type === 'Lordzinho';
+                this.isLagartao = type === 'Lagartao';
+
+                this.maxHealth = 0;
+
+                this.isSuperHorde = type === 'SuperHorde';
+
+                // Lagartão flags
+                this.hasShootSlime = false;
+                this.slimeTimer = 0;
+
+                // Necrolord flags
+                this.hasSpawnedMinions = false;
+                this.hasExploded = false;
+
+                if (this.isLagartao) {
+                    this.maxHealth = 10000;
+                    this.size = PARASITE_BOSS_SIZE * 1.3;
+                    this.speed = currentGiantSpeed * 0.7;
+                    bossAlertTimer = BOSS_ALERT_DURATION;
+                    document.getElementById('boss-alert').textContent = 'CUIDADO! O LAGARTÃO ESTÁ CHEGANDO!';
+                } else if (this.isNecrolord) {
+                    this.maxHealth = 10000;
+                    this.size = PARASITE_BOSS_SIZE * 1.2;
+                    this.speed = currentGiantSpeed * 0.6;
+                    bossAlertTimer = BOSS_ALERT_DURATION;
+                    document.getElementById('boss-alert').textContent = 'CUIDADO! O NECROLORD ESTÁ CHEGANDO!';
+                } else if (this.isLordzinho) {
+                    this.maxHealth = 500;
+                    this.size = PARASITE_SIZE * 0.9;
+                    this.speed = currentParasiteSpeed * 1.2;
+                } else if (this.isBoss) {
+                    this.maxHealth = 5000;
+                    this.size = PARASITE_BOSS_SIZE;
+                    this.speed = currentGiantSpeed * 0.8;
+                    bossAlertTimer = BOSS_ALERT_DURATION;
+                    document.getElementById('boss-alert').textContent = 'CUIDADO! O GIGABUCHO ESTÁ CHEGANDO!';
+                } else if (this.isGiant) {
+                    this.maxHealth = 1000;
+                    this.size = PARASITE_GIGANTE_SIZE;
+                    this.speed = currentGiantSpeed;
+                } else if (this.isRunner) {
+                    this.maxHealth = 310;
+                    this.size = PARASITE_SIZE * 0.9;
+                    this.speed = currentParasiteSpeed * 2.0;
+                } else if (this.isSlow) {
+                    this.maxHealth = 800;
+                    this.size = PARASITE_SIZE * 1.4;
+                    this.speed = currentParasiteSpeed * 0.5;
+                } else if (this.isSuperHorde) {
+                    this.maxHealth = 450;
+                    this.size = PARASITE_SIZE * 1.3;
+                    this.speed = currentParasiteSpeed * 1.2;
+                } else if (this.isHorde) {
+                    this.maxHealth = 400;
+                    this.size = PARASITE_SIZE * 1.2;
+                    this.speed = currentParasiteSpeed * 1.1;
+                } else {
+                    this.maxHealth = 200;
+                    this.size = PARASITE_SIZE;
+                    this.speed = currentParasiteSpeed;
+                }
+
+                // Offset para agrupamento (hordas andam juntas)
+                this.groupOffsetX = 0;
+                this.groupOffsetY = 0;
+
+                this.health = this.maxHealth;
+                this.hitTimer = 0;
+
+                const isHorizontal = Math.random() < 0.5;
+                this.x = isHorizontal ? (Math.random() < 0.5 ? 0 : WIDTH) : (Math.random() * WIDTH);
+                this.y = isHorizontal ? (Math.random() * HEIGHT) : (Math.random() < 0.5 ? 0 : HEIGHT);
+
+                this.targetX = PLAYER_CENTER_X + this.groupOffsetX;
+                this.targetY = PLAYER_CENTER_Y + this.groupOffsetY;
+                this.bossColorTimer = 0;
+                this.bloodTimer = 0;
+            }
+
+            update(dt) {
+                if (gameState !== 'PLAYING') return;
+
+                // Handle stun
+                if (this.isStunned) {
+                    this.stunTimer -= dt;
+                    if (this.stunTimer <= 0) {
+                        this.isStunned = false;
+                    }
+                    return; // Não move enquanto stunned
+                }
+
+                // Encontrar alvo mais próximo (torretas primeiro, depois jogador)
+                let closestTurret = null;
+                let closestTurretDist = Infinity;
+                for (const turret of turrets) {
+                    if (turret.health > 0) {
+                        const dist = Math.sqrt((turret.x - this.x) ** 2 + (turret.y - this.y) ** 2);
+                        if (dist < closestTurretDist) {
+                            closestTurretDist = dist;
+                            closestTurret = turret;
+                        }
+                    }
+                }
+
+                if (closestTurret) {
+                    this.targetX = closestTurret.x;
+                    this.targetY = closestTurret.y;
+                    this.currentTarget = closestTurret;
+                } else {
+                    this.targetX = PLAYER_CENTER_X + this.groupOffsetX;
+                    this.targetY = PLAYER_CENTER_Y + this.groupOffsetY;
+                    this.currentTarget = null;
+                }
+
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                this.distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Se está atacando torreta
+                if (this.currentTarget && this.distance < 40) {
+                    if (!isImmortalTurrets) {
+                        this.currentTarget.health -= 50 * dt;
+                        if (this.currentTarget.health <= 0) {
+                            const idx = turrets.indexOf(this.currentTarget);
+                            if (idx !== -1) {
+                                turrets.splice(idx, 1);
+                                addFloatingText(this.currentTarget.x, this.currentTarget.y, 'TORRETA DESTRUÍDA!', 'red');
+                            }
+                        }
+                    }
+                }
+                // Se está atacando jogador
+                else if (!this.currentTarget && this.distance < PLAYER_REACH_DIST) {
+                    if (playerShield > 0) {
+                        // Escudo causa 5000 de dano no parasita que encosta
+                        if (shieldDamageCooldown <= 0) {
+                            shieldDamageCooldown = 0.1; // Pequeno cooldown
+                            playExplosionSound();
+                            applyDamage(this, 5000, false);
+                            addFloatingText(this.x, this.y, '5000 DMG!', '#ff0000');
+                            // Reduz HP do escudo (a menos que seja imortal)
+                            if (!isImmortalShield) {
+                                playerShield = Math.max(0, playerShield - 100);
+                            }
+                            addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 30, `ESCUDO: ${playerShield}/${MAX_SHIELD_HP}`, '#ff0000');
+                        }
+                        // Empurra o parasita para trás
+                        const pushDist = 80;
+                        const pushAngle = Math.atan2(this.y - PLAYER_CENTER_Y, this.x - PLAYER_CENTER_X);
+                        this.x = PLAYER_CENTER_X + Math.cos(pushAngle) * pushDist;
+                        this.y = PLAYER_CENTER_Y + Math.sin(pushAngle) * pushDist;
+                    } else if (!isGodMode) {
+                        gameState = 'GAMEOVER';
+                        stopBackgroundMusic();
+                        playGameOverSound();
+                        return;
+                    }
+                }
+
+                if (this.distance > 0) {
+                    const vx = (dx / this.distance) * this.speed * dt;
+                    const vy = (dy / this.distance) * this.speed * dt;
+                    this.x += vx;
+                    this.y += vy;
+                }
+
+                this.hitTimer = Math.max(0, this.hitTimer - dt);
+
+                if (this.isBoss) {
+                    this.bossColorTimer += dt;
+                }
+
+                // Lagartão solta gosma verde quando anda
+                if (this.isLagartao) {
+                    this.bossColorTimer += dt;
+                    this.bloodTimer += dt;
+                    if (this.bloodTimer >= 0.15) {
+                        this.bloodTimer = 0;
+                        bloodParticles.push({
+                            x: this.x + (Math.random() - 0.5) * this.size,
+                            y: this.y + (Math.random() - 0.5) * this.size,
+                            size: 4 + Math.random() * 6,
+                            life: 1.2 + Math.random() * 0.5,
+                            vx: (Math.random() - 0.5) * 15,
+                            vy: (Math.random() - 0.5) * 15,
+                            color: '#00ff00' // Gosma verde
+                        });
+                    }
+                }
+
+                // Necrolord e Lordzinho soltam sangue quando andam
+                if (this.isNecrolord || this.isLordzinho) {
+                    this.bossColorTimer += dt;
+                    this.bloodTimer += dt;
+                    if (this.bloodTimer >= 0.1) {
+                        this.bloodTimer = 0;
+                        bloodParticles.push({
+                            x: this.x + (Math.random() - 0.5) * this.size,
+                            y: this.y + (Math.random() - 0.5) * this.size,
+                            size: 3 + Math.random() * 5,
+                            life: 1.0 + Math.random() * 0.5,
+                            vx: (Math.random() - 0.5) * 20,
+                            vy: (Math.random() - 0.5) * 20
+                        });
+                    }
+                }
+            }
+
+            getBossColor() {
+                const colors = ['red', 'cyan', 'magenta', 'yellow'];
+                const index = Math.floor(this.bossColorTimer * 5) % colors.length;
+                return colors[index];
+            }
+
+            getNecrolordColor() {
+                // Alterna entre vermelho e preto neon
+                const phase = Math.floor(this.bossColorTimer * 3) % 2;
+                if (phase === 0) {
+                    return '#ff0000'; // Vermelho
+                } else {
+                    return '#1a0a1a'; // Preto neon (escuro com brilho)
+                }
+            }
+
+            getLagartaoColor() {
+                // Alterna entre verde claro e verde escuro
+                const phase = Math.floor(this.bossColorTimer * 3) % 2;
+                if (phase === 0) {
+                    return '#00ff00'; // Verde claro
+                } else {
+                    return '#006600'; // Verde escuro
+                }
+            }
+
+            draw() {
+                let color = '#33cc33';
+                let darkColor = '#228822';
+                if (this.isLagartao) {
+                    color = this.getLagartaoColor();
+                    darkColor = color;
+                }
+                else if (this.isNecrolord) {
+                    color = this.getNecrolordColor();
+                    darkColor = color;
+                }
+                else if (this.isLordzinho) {color = '#8B0000'; darkColor = '#5a0000';}
+                else if (this.isBoss) {color = this.getBossColor(); darkColor = color;}
+                else if (this.isGiant) {color = '#cc3333'; darkColor = '#992222';}
+                else if (this.isRunner) {color = '#3399ff'; darkColor = '#2266aa';}
+                else if (this.isSlow) {color = '#8B4513'; darkColor = '#6b3810';}
+                else if (this.isSuperHorde) {color = '#9933ff'; darkColor = '#7722cc';}
+                else if (this.isHorde) {color = '#ffcc00'; darkColor = '#cc9900';}
+
+                if (this.hitTimer > 0) {color = 'white'; darkColor = '#cccccc';}
+
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const angle = Math.atan2(dy, dx);
+
+                if (this.isNecrolord) {
+                    ctx.save();
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = this.bossColorTimer % 0.5 < 0.25 ? '#ff0000' : '#660066';
+                }
+
+                const legLength = this.size * 0.4;
+                const legWidth = this.size * 0.15;
+                ctx.fillStyle = darkColor;
+                ctx.strokeStyle = darkColor;
+                ctx.lineWidth = legWidth;
+
+                const leftLegAngle = angle + Math.PI + Math.PI / 4;
+                const rightLegAngle = angle + Math.PI - Math.PI / 4;
+                const leftLegX = this.x + Math.cos(leftLegAngle) * legLength;
+                const leftLegY = this.y + Math.sin(leftLegAngle) * legLength;
+                const rightLegX = this.x + Math.cos(rightLegAngle) * legLength;
+                const rightLegY = this.y + Math.sin(rightLegAngle) * legLength;
+
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(leftLegX, leftLegY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(leftLegX, leftLegY, this.size * 0.12, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(rightLegX, rightLegY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(rightLegX, rightLegY, this.size * 0.12, 0, Math.PI * 2);
+                ctx.fill();
+
+                const handSize = this.size * 0.2;
+                const armLength = this.size * 0.55;
+                ctx.fillStyle = darkColor;
+                ctx.strokeStyle = darkColor;
+                ctx.lineWidth = this.size * 0.1;
+
+                const leftArmAngle = angle - Math.PI / 3;
+                const rightArmAngle = angle + Math.PI / 3;
+
+                const leftArmX = this.x + Math.cos(leftArmAngle) * armLength;
+                const leftArmY = this.y + Math.sin(leftArmAngle) * armLength;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(leftArmX, leftArmY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(leftArmX, leftArmY, handSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                const rightArmX = this.x + Math.cos(rightArmAngle) * armLength;
+                const rightArmY = this.y + Math.sin(rightArmAngle) * armLength;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(rightArmX, rightArmY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(rightArmX, rightArmY, handSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 0.45, 0, Math.PI * 2);
+                ctx.fill();
+
+                const headSize = this.size * 0.35;
+                const headX = this.x + Math.cos(angle) * this.size * 0.25;
+                const headY = this.y + Math.sin(angle) * this.size * 0.25;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(headX, headY, headSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = this.hitTimer > 0 ? '#999' : '#111';
+                const eyeOffset = headSize * 0.35;
+                const eyeSize = headSize * 0.25;
+                const leftEyeAngle = angle - Math.PI / 3;
+                const rightEyeAngle = angle + Math.PI / 3;
+                ctx.beginPath();
+                ctx.arc(headX + Math.cos(leftEyeAngle) * eyeOffset, headY + Math.sin(leftEyeAngle) * eyeOffset, eyeSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(headX + Math.cos(rightEyeAngle) * eyeOffset, headY + Math.sin(rightEyeAngle) * eyeOffset, eyeSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (this.isNecrolord) {
+                    ctx.restore();
+                }
+
+                this.drawHealthBar();
+            }
+
+            drawHealthBar() {
+                const barWidth = this.size * 1.5;
+                const barHeight = 5;
+                const barX = this.x - barWidth / 2;
+                const barY = this.y - this.size / 2 - barHeight - 5;
+                const healthRatio = Math.max(0, this.health / this.maxHealth);
+
+                ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+
+                let healthColor = 'lime';
+                if (healthRatio < 0.5) healthColor = 'yellow';
+                if (healthRatio < 0.2) healthColor = 'red';
+
+                ctx.fillStyle = healthColor;
+                ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
+            }
+        }
+
+        // --- CLASSE TORRETA ---
+        class Turret {
+            constructor(x, y, ammoType) {
+                this.x = x;
+                this.y = y;
+                this.ammoType = ammoType;
+                this.size = 30;
+                this.angle = 0;
+                this.fireTimer = 0;
+                this.range = Infinity;
+                this.target = null;
+
+                // Stats por tipo de munição
+                this.stats = {
+                    minigun: {rate: 0.08, damage: 30, color: '#ff5555', projectileSpeed: 600},
+                    rpg: {rate: 1.5, damage: 300, color: '#ffff00', projectileSpeed: 300},
+                    flamethrower: {rate: 0.1, damage: 100, color: '#ff4500', projectileSpeed: 400},
+                    stun: {rate: 2.0, damage: 5, color: '#00ffff', projectileSpeed: 500, stunDuration: 3},
+                    laser: {rate: 0.5, damage: 60, color: '#ff00ff', projectileSpeed: 800}
+                };
+                this.health = 1000;
+                this.maxHealth = 1000;
+            }
+
+            update(dt) {
+                if (gameState !== 'PLAYING') return;
+
+                // Sincronizar munição se mudou globalmente
+                if (this.ammoType !== turretAmmoType) {
+                    this.ammoType = turretAmmoType;
+                    this.fireTimer = 0; // Reset timer ao mudar tipo
+                }
+
+                // Encontrar alvo mais próximo
+                this.target = null;
+                let closestDist = this.range;
+                for (const p of parasites) {
+                    const dx = p.x - this.x;
+                    const dy = p.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        this.target = p;
+                    }
+                }
+
+                if (this.target) {
+                    // Apontar para o alvo
+                    this.angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+
+                    // Atirar
+                    this.fireTimer += dt;
+                    const stat = this.stats[this.ammoType];
+
+                    if (this.ammoType === 'laser') {
+                        // Laser contínuo (sem timer de disparo, causa dano por frame/tick)
+                        this.fire();
+                    } else if (this.fireTimer >= stat.rate) {
+                        this.fireTimer = 0;
+                        this.fire();
+                    }
+                }
+            }
+
+            fire() {
+                const stat = this.stats[this.ammoType];
+                const muzzleX = this.x + Math.cos(this.angle) * this.size;
+                const muzzleY = this.y + Math.sin(this.angle) * this.size;
+
+                if (this.ammoType === 'laser') {
+                    // LASER REMASTERIZADO: Igual ao do player (feixe contínuo)
+                    const beamWidth = 6;
+                    
+                    // Determinar ponto final do feixe (bate no alvo ou vai até o limite)
+                    let endX = this.target.x;
+                    let endY = this.target.y;
+
+                    // Desenha o feixe laser
+                    ctx.save();
+                    ctx.strokeStyle = stat.color;
+                    ctx.lineWidth = beamWidth;
+                    ctx.lineCap = 'round';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = stat.color;
+                    ctx.beginPath();
+                    ctx.moveTo(muzzleX, muzzleY);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+
+                    // Núcleo brilhante
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = beamWidth * 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(muzzleX, muzzleY);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // Causa dano contínuo (dividido por FPS aprox para equilibrar com o rate anterior)
+                    // stat.rate original era 0.15 para 80 de dano.
+                    // Aqui aplicamos um pequeno dano por frame.
+                    applyDamage(this.target, stat.damage * 0.1, false);
+                    
+                    // Som do laser (ocasional para não estourar o áudio)
+                    if (Math.random() < 0.1) playShootSound('Laser');
+
+                } else if (this.ammoType === 'flamethrower') {
+                    // Cria partículas de fogo
+                    for (let i = 0; i < 5; i++) {
+                        const spread = (Math.random() - 0.5) * 0.5;
+                        flameParticles.push({
+                            x: muzzleX,
+                            y: muzzleY,
+                            vx: Math.cos(this.angle + spread) * (450 + Math.random() * 150),
+                            vy: Math.sin(this.angle + spread) * (450 + Math.random() * 150),
+                            life: 0.8 + Math.random() * 0.4,
+                            size: 8 + Math.random() * 8,
+                            color: Math.random() < 0.5 ? '#ff4500' : '#ffcc00',
+                            fromTurret: true,
+                            damage: stat.damage
+                        });
+                    }
+                } else if (this.ammoType === 'stun') {
+                    const proj = new Projectile(muzzleX, muzzleY, this.target.x, this.target.y, stat.damage, 'stun', stat.color, stat.projectileSpeed, 8);
+                    proj.stunDuration = stat.stunDuration;
+                    projectiles.push(proj);
+                } else if (this.ammoType === 'rpg') {
+                    projectiles.push(new Projectile(muzzleX, muzzleY, this.target.x, this.target.y, stat.damage, 'explosive', stat.color, stat.projectileSpeed, 10));
+                } else {
+                    projectiles.push(new Projectile(muzzleX, muzzleY, this.target.x, this.target.y, stat.damage, 'bullet', stat.color, stat.projectileSpeed, 4));
+                }
+
+                playShootSound(this.ammoType === 'rpg' ? 'RPG' : (this.ammoType === 'minigun' ? 'Minigun' : (this.ammoType === 'flamethrower' ? 'Lança-Chamas' : 'Laser')));
+            }
+
+            draw() {
+                const stat = this.stats[this.ammoType];
+
+                // Base da torreta (quadrado)
+                ctx.fillStyle = '#444';
+                ctx.fillRect(this.x - this.size * 0.7, this.y - this.size * 0.7, this.size * 1.4, this.size * 1.4);
+
+                // Corpo da torreta (quadrado menor)
+                ctx.fillStyle = '#666';
+                ctx.fillRect(this.x - this.size * 0.5, this.y - this.size * 0.5, this.size, this.size);
+
+                // Canhão
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.fillStyle = stat.color;
+                ctx.fillRect(0, -5, this.size, 10);
+                ctx.restore();
+
+                // Indicador de tipo (quadrado pequeno)
+                ctx.fillStyle = stat.color;
+                ctx.fillRect(this.x - this.size * 0.2, this.y - this.size * 0.2, this.size * 0.4, this.size * 0.4);
+
+                // Barra de vida da torreta
+                const barWidth = this.size * 1.5;
+                const barHeight = 6;
+                const barX = this.x - barWidth / 2;
+                const barY = this.y - this.size - 10;
+                const healthRatio = this.health / this.maxHealth;
+
+                ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+
+                let healthColor = '#00ffff';
+                if (healthRatio < 0.5) healthColor = '#ffff00';
+                if (healthRatio < 0.2) healthColor = '#ff0000';
+
+                ctx.fillStyle = healthColor;
+                ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
+            }
+        }
+
+        // --- CLASSE PROJÉTIL (Mantida) ---
+        class Projectile {
+            constructor(x, y, targetX, targetY, damage, type, color, speed, size = 5) {
+                this.x = x;
+                this.y = y;
+                this.damage = damage;
+                this.type = type;
+                this.color = color;
+                this.size = size;
+                this.speed = speed || 800;
+                this.isHit = false;
+
+                const dx = targetX - x;
+                const dy = targetY - y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                this.vx = (dx / distance) * this.speed;
+                this.vy = (dy / distance) * this.speed;
+            }
+
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+			
+                // Hitbox da bala - verifica colisão com todos os parasitas
+                for (let i = parasites.length - 1; i >= 0; i--) {
+                    const p = parasites[i];
+                    const parasiteHalfSize = p.size / 2;
+                    const bulletHalfSize = this.size / 2;
+
+                    // Colisão de hitbox (retângulo vs retângulo)
+                    if (this.x + bulletHalfSize >= p.x - parasiteHalfSize &&
+                        this.x - bulletHalfSize <= p.x + parasiteHalfSize &&
+                        this.y + bulletHalfSize >= p.y - parasiteHalfSize &&
+                        this.y - bulletHalfSize <= p.y + parasiteHalfSize) {
+
+                        if (this.type === 'explosive') {
+                            this.detonate();
+                            this.isHit = true;
+                            return;
+                        } else if (this.type === 'stun') {
+                            // Dardo paralisante - causa pequeno dano e paralisa
+                            p.isStunned = true;
+                            p.stunTimer = this.stunDuration || 3;
+                            applyDamage(p, this.damage, false);
+                            addFloatingText(p.x, p.y - 20, 'STUNNED!', '#00ffff');
+                            this.isHit = true;
+                            return;
+                        } else if (this.damage > 0) {
+                            // Bala normal - causa dano e some
+                            const isHeadshot = this.y <= p.y - parasiteHalfSize + (p.size * 0.25);
+                            applyDamage(p, this.damage, isHeadshot);
+                            this.isHit = true;
+                            return;
+                        }
+                    }
+                }
+
+                // Verifica colisão com tiros mortais do Lagartão
+                for (let j = projectiles.length - 1; j >= 0; j--) {
+                    const deadly = projectiles[j];
+                    if (deadly.isDeadlyShot && deadly !== this) {
+                        const dx = this.x - deadly.x;
+                        const dy = this.y - deadly.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < deadly.size / 2 + this.size / 2) {
+                            deadly.hitPoints--;
+                            addFloatingText(deadly.x, deadly.y - 20, `${deadly.hitPoints}/3`, '#ffff00');
+                            this.isHit = true;
+                            return;
+                        }
+                    }
+                }
+
+                if (this.x < -150 || this.x > WIDTH + 150 || this.y < -150 || this.y > HEIGHT + 150) {
+                    this.isHit = true;
+                }
+            }
+
+            detonate() {
+                const explosionX = this.x;
+                const explosionY = this.y;
+
+                playExplosionSound();
+                bigShotEffect = {x: explosionX, y: explosionY, timer: 0.15, radius: RPG_EXPLOSION_RADIUS};
+
+                for (let i = parasites.length - 1; i >= 0; i--) {
+                    const p = parasites[i];
+                    const dist = Math.sqrt(Math.pow(p.x - explosionX, 2) + Math.pow(p.y - explosionY, 2));
+                    if (dist < RPG_EXPLOSION_RADIUS) {
+                        applyDamage(p, this.damage, false);
+                    }
+                }
+            }
+
+            draw() {
+                if (this.type === 'bullet' || this.type === 'shotgun') {
+                    const angle = Math.atan2(this.vy, this.vx);
+                    const fireLength = 15;
+                    ctx.save();
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#ff4500';
+                    ctx.fillStyle = '#ff6600';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x - Math.cos(angle) * fireLength, this.y - Math.sin(angle) * fireLength);
+                    ctx.lineTo(this.x - Math.cos(angle + Math.PI / 2) * 4, this.y - Math.sin(angle + Math.PI / 2) * 4);
+                    ctx.lineTo(this.x - Math.cos(angle - Math.PI / 2) * 4, this.y - Math.sin(angle - Math.PI / 2) * 4);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x - Math.cos(angle) * (fireLength * 0.6), this.y - Math.sin(angle) * (fireLength * 0.6));
+                    ctx.lineTo(this.x - Math.cos(angle + Math.PI / 2) * 2, this.y - Math.sin(angle + Math.PI / 2) * 2);
+                    ctx.lineTo(this.x - Math.cos(angle - Math.PI / 2) * 2, this.y - Math.sin(angle - Math.PI / 2) * 2);
+                    ctx.fill();
+                    ctx.restore();
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+                } else if (this.type === 'explosive') {
+                    // Míssil RPG
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x - 5, this.y - 5, 10, 10);
+
+                    // Rastro de fogo
+                    ctx.fillStyle = 'orange';
+                    ctx.beginPath();
+                    const angle = Math.atan2(this.vy, this.vx);
+                    const fireLength = 20;
+                    ctx.moveTo(this.x - Math.cos(angle) * fireLength, this.y - Math.sin(angle) * fireLength);
+                    ctx.lineTo(this.x - Math.cos(angle + Math.PI / 2) * 5, this.y - Math.sin(angle + Math.PI / 2) * 5);
+                    ctx.lineTo(this.x - Math.cos(angle - Math.PI / 2) * 5, this.y - Math.sin(angle - Math.PI / 2) * 5);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function updateProjectiles(dt) {
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+
+                // Projéteis de gosma do Lagartão (objetos simples) - REMOVIDO PODER ANTIGO
+                if (p.isSlime) {
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= dt;
+
+                    // Verifica colisão com jogador
+                    const distToPlayer = Math.sqrt((p.x - PLAYER_CENTER_X) ** 2 + (p.y - PLAYER_CENTER_Y) ** 2);
+                    if (distToPlayer < PLAYER_SIZE + p.size / 2) {
+                        // Aplica debuff de taxa de tiro (10% mais lento)
+                        playerFireRateDebuff = 0.9;
+                        fireRateDebuffTimer = 10; // Dura 10 segundos
+                        addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 40, 'TAXA DE TIRO -10%!', '#00ff00');
+                        projectiles.splice(i, 1);
+                        continue;
+                    }
+
+                    // Remove se expirou ou saiu da tela
+                    if (p.life <= 0 || p.x < 0 || p.x > WIDTH || p.y < 0 || p.y > HEIGHT) {
+                        projectiles.splice(i, 1);
+                        continue;
+                    }
+                } else if (p.isDeadlyShot) {
+                    // Tiro mortal do Lagartão - mata instantaneamente se atingir
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= dt;
+
+                    // Adiciona rastro verde
+                    if (!p.trail) p.trail = [];
+                    p.trail.push({x: p.x, y: p.y, life: 0.5});
+                    // Atualiza e remove rastro antigo
+                    for (let t = p.trail.length - 1; t >= 0; t--) {
+                        p.trail[t].life -= dt;
+                        if (p.trail[t].life <= 0) p.trail.splice(t, 1);
+                    }
+
+                    // Verifica colisão com jogador
+                    const distToPlayer = Math.sqrt((p.x - PLAYER_CENTER_X) ** 2 + (p.y - PLAYER_CENTER_Y) ** 2);
+                    if (distToPlayer < PLAYER_SIZE + p.size / 2) {
+                        if (!isGodMode) {
+                            // Mata o jogador instantaneamente
+                            gameState = 'GAMEOVER';
+                            stopBackgroundMusic();
+                            playGameOverSound();
+                            addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y, 'MORTE INSTANTÂNEA!', '#ff0000');
+                            projectiles.splice(i, 1);
+                            return;
+                        } else {
+                            addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 40, 'GOD MODE SALVOU!', '#00ff00');
+                            projectiles.splice(i, 1);
+                            continue;
+                        }
+                    }
+
+                    // Remove se expirou ou saiu da tela ou destruído
+                    if (p.life <= 0 || p.x < 0 || p.x > WIDTH || p.y < 0 || p.y > HEIGHT || p.hitPoints <= 0) {
+                        if (p.hitPoints <= 0) {
+                            addFloatingText(p.x, p.y, 'DESTRUÍDO!', '#00ff00');
+                            playExplosionSound();
+                        }
+                        projectiles.splice(i, 1);
+                        continue;
+                    }
+                } else {
+                    p.update(dt);
+                    if (p.isHit) {
+                        projectiles.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        function drawProjectiles() {
+            projectiles.forEach(p => {
+                if (p.isSlime) {
+                    // Desenha projétil de gosma
+                    ctx.save();
+                    ctx.fillStyle = p.color;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                } else if (p.isDeadlyShot) {
+                    // Desenha rastro verde
+                    if (p.trail) {
+                        for (const t of p.trail) {
+                            ctx.save();
+                            ctx.globalAlpha = t.life / 0.5;
+                            ctx.fillStyle = '#00ff00';
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = '#00ff00';
+                            ctx.beginPath();
+                            ctx.arc(t.x, t.y, p.size / 3, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    }
+                    // Desenha tiro mortal do Lagartão (alterna vermelho e verde)
+                    ctx.save();
+                    const pulse = 1 + Math.sin(Date.now() / 100) * 0.3;
+                    const colorPhase = Math.floor(Date.now() / 200) % 2;
+                    const mainColor = colorPhase === 0 ? '#ff0000' : '#00ff00';
+                    ctx.fillStyle = mainColor;
+                    ctx.shadowBlur = 30 * pulse;
+                    ctx.shadowColor = mainColor;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, (p.size / 2) * pulse, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Desenha caveira no centro
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `${p.size * 0.8}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('💀', p.x, p.y);
+                    ctx.restore();
+                } else {
+                    p.draw();
+                }
+            });
+        }
+
+
+        // --- FUNÇÕES DE JOGABILIDADE ---
+
+        // Função para calcular distância de um ponto até uma linha
+        function pointToLineDistance(px, py, x1, y1, x2, y2) {
+            const A = px - x1;
+            const B = py - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            let param = -1;
+
+            if (lenSq !== 0) param = dot / lenSq;
+
+            let xx, yy;
+
+            if (param < 0) {
+                xx = x1;
+                yy = y1;
+            } else if (param > 1) {
+                xx = x2;
+                yy = y2;
+            } else {
+                xx = x1 + param * C;
+                yy = y1 + param * D;
+            }
+
+            const dx = px - xx;
+            const dy = py - yy;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function performShot(x, y, damage, isShotgun = false) {
+
+            if (currentWeapon.type === 'explosive') {
+                const rpgProjectile = new Projectile(
+                    PLAYER_CENTER_X,
+                    PLAYER_CENTER_Y,
+                    x,
+                    y,
+                    damage,
+                    'explosive',
+                    currentWeapon.color,
+                    currentWeapon.projectileSpeed || 400,
+                    10
+                );
+                projectiles.push(rpgProjectile);
+                return true;
+
+            } else {
+                // Projétil real com hitbox - a colisão acontece no update()
+                const bulletSize = isShotgun ? 6 : 8;
+                projectiles.push(new Projectile(
+                    PLAYER_CENTER_X,
+                    PLAYER_CENTER_Y,
+                    x,
+                    y,
+                    damage,
+                    isShotgun ? 'shotgun' : 'bullet',
+                    currentWeapon.color,
+                    1000,
+                    bulletSize
+                ));
+
+                return true;
+            }
+        }
+
+        function handleLaserShot(e) {
+            playBackgroundMusic();
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            if (e.button === 2) {
+                if (currentWeapon.name === 'Laser') {
+                    if (gameState !== 'PLAYING' || isReloading) return;
+                    if (currentWeapon.ammo.mag < 100 && !isInfiniteAmmo) return;
+
+                    if (!isInfiniteAmmo) {currentWeapon.ammo.mag -= 100;}
+
+                    // Calcular direção do feixe
+                    const dx = clickX - PLAYER_CENTER_X;
+                    const dy = clickY - PLAYER_CENTER_Y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const dirX = dx / distance;
+                    const dirY = dy / distance;
+
+                    // Estender o feixe até a borda da tela
+                    const maxDist = Math.max(WIDTH, HEIGHT) * 2;
+                    const endX = PLAYER_CENTER_X + dirX * maxDist;
+                    const endY = PLAYER_CENTER_Y + dirY * maxDist;
+
+                    // Largura do feixe gigante
+                    const beamWidth = 40;
+
+                    // Detectar todos os parasitas no caminho do feixe
+                    let hitCount = 0;
+                    for (let i = parasites.length - 1; i >= 0; i--) {
+                        const p = parasites[i];
+                        // Calcular distância do parasita até a linha do feixe
+                        const distToBeam = pointToLineDistance(p.x, p.y, PLAYER_CENTER_X, PLAYER_CENTER_Y, endX, endY);
+
+                        // Verificar se está na direção certa (não atrás do jogador)
+                        const toParasiteDx = p.x - PLAYER_CENTER_X;
+                        const toParasiteDy = p.y - PLAYER_CENTER_Y;
+                        const dotProduct = toParasiteDx * dirX + toParasiteDy * dirY;
+
+                        if (distToBeam <= beamWidth / 2 + p.size / 2 && dotProduct > 0) {
+                            applyDamage(p, BASE_WEAPONS['7'].bigShotDamage, false);
+                            hitCount++;
+                        }
+                    }
+
+                    // Criar efeito visual do feixe gigante
+                    playBigLaserSound();
+                    bigLaserBeam = {
+                        startX: PLAYER_CENTER_X,
+                        startY: PLAYER_CENTER_Y,
+                        endX: endX,
+                        endY: endY,
+                        width: beamWidth,
+                        timer: 0.3
+                    };
+
+                    if (hitCount > 0) {
+                        addFloatingText(clickX, clickY, `${hitCount}x 500 (BIG LASER)`, 'red');
+                    } else {
+                        addFloatingText(clickX, clickY, `MISS`, 'gray');
+                    }
+                    shotCooldown = 1.0;
+                    return;
+                }
+            }
+
+            if (e.button === 0) {
+                // Colocar torreta se estiver no modo de colocação
+                if (placingTurret && gameState === 'PLAYING') {
+                    if (turrets.length >= MAX_TURRETS) {
+                        addFloatingText(clickX, clickY, 'MÁXIMO DE TORRETAS!', 'red');
+                    } else {
+                        turrets.push(new Turret(clickX, clickY, turretAmmoType));
+                        addFloatingText(clickX, clickY, `TORRETA ${turretAmmoType.toUpperCase()}`, getTurretColor(turretAmmoType));
+                        playButtonClickSound();
+                    }
+                    return;
+                }
+
+                isLeftMouseDown = true;
+                if (currentWeapon.name === 'Laser') {
+                    isLaserFiring = true;
+                    mousePos.x = clickX;
+                    mousePos.y = clickY;
+                    return;
+                }
+                if (currentWeapon.type === 'flamethrower') {
+                    isFlamethrowerFiring = true;
+                    mousePos.x = clickX;
+                    mousePos.y = clickY;
+                    return;
+                }
+                if (currentWeapon.type === 'nuke') {
+                    if (nukeCooldown > 0 && !isInfiniteAmmo) {
+                        addFloatingText(WIDTH / 2, HEIGHT / 2, `NUKE COOLDOWN: ${Math.ceil(nukeCooldown)}s`, 'red');
+                        return;
+                    }
+                    if (currentWeapon.ammo.mag <= 0 && !isInfiniteAmmo) {
+                        addFloatingText(WIDTH / 2, HEIGHT / 2, 'SEM NUKES!', 'red');
+                        return;
+                    }
+
+                    if (!isInfiniteAmmo) {
+                        currentWeapon.ammo.mag--;
+                        nukeCooldown = NUKE_COOLDOWN_TIME;
+                    }
+
+                    playExplosionSound();
+                    const nukeRadius = 400;
+                    nukeEffect = {x: clickX, y: clickY, radius: nukeRadius, timer: 0.5};
+
+                    let hitCount = 0;
+                    for (let i = parasites.length - 1; i >= 0; i--) {
+                        const p = parasites[i];
+                        const dx = p.x - clickX;
+                        const dy = p.y - clickY;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= nukeRadius + p.size / 2) {
+                            applyDamage(p, 2000, false);
+                            hitCount++;
+                        }
+                    }
+
+                    addFloatingText(clickX, clickY, `NUKE! ${hitCount} HITS`, '#ff00ff');
+                    return;
+                }
+            }
+
+            if (e.button !== 0 || shotCooldown > 0 || gameState !== 'PLAYING' || isReloading) return;
+
+            if (currentWeapon.ammo.mag <= 0 && !isInfiniteAmmo) return;
+
+            if (glockMode === 'burst' && currentWeaponId === '1') {
+                if (!isInfiniteAmmo) {
+                    currentWeapon.ammo.mag = Math.max(0, currentWeapon.ammo.mag - 5);
+                }
+                burstShotsRemaining = BURST_SHOTS;
+                burstTimer = 0;
+                shotCooldown = currentWeapon.rate / playerFireRateDebuff; // Aplica debuff
+                return;
+            }
+
+            triggerSingleShot(clickX, clickY);
+
+            if (currentWeapon.ammo.mag === 0) {
+                startReload();
+            }
+        }
+
+        function triggerSingleShot(x, y) {
+            if (currentWeapon.ammo.mag <= 0 && !isInfiniteAmmo) return;
+
+            if (!isInfiniteAmmo) {
+                currentWeapon.ammo.mag--;
+            } else if (currentWeapon.type !== 'laser') {
+                currentWeapon.ammo.mag = currentWeapon.mag;
+            }
+
+            playShootSound(currentWeapon.name);
+
+            if (currentWeapon.type === 'shotgun') {
+                for (let i = 0; i < currentWeapon.pellets; i++) {
+                    const spreadX = x + (Math.random() - 0.5) * 50;
+                    const spreadY = y + (Math.random() - 0.5) * 50;
+                    performShot(spreadX, spreadY, currentWeapon.damage, true);
+                }
+            } else {
+                performShot(x, y, currentWeapon.damage, false);
+            }
+
+            shotCooldown = currentWeapon.rate / playerFireRateDebuff; // Aplica debuff
+        }
+
+        function triggerBurstShot(x, y) {
+            playShootSound(currentWeapon.name);
+            if (currentWeapon.type === 'shotgun') {
+                for (let i = 0; i < currentWeapon.pellets; i++) {
+                    const spreadX = x + (Math.random() - 0.5) * 50;
+                    const spreadY = y + (Math.random() - 0.5) * 50;
+                    performShot(spreadX, spreadY, currentWeapon.damage, true);
+                }
+            } else {
+                performShot(x, y, currentWeapon.damage, false);
+            }
+        }
+
+        function handleMouseUp(e) {
+            if (e.button === 2) isScoped = false;
+
+            if (e.button === 0) {
+                isLeftMouseDown = false;
+                if (currentWeapon.name === 'Laser') {
+                    isLaserFiring = false;
+                }
+                if (currentWeapon.type === 'flamethrower') {
+                    isFlamethrowerFiring = false;
+                }
+            }
+        }
+
+        function handleMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+        }
+
+        function switchWeapon(id) {
+            // CORREÇÃO 3: Garantir que o objeto weapon seja usado corretamente.
+            if (BASE_WEAPONS[id]) {
+                playWeaponSwitchSound();
+                currentWeaponId = id;
+                currentWeapon = BASE_WEAPONS[currentWeaponId];
+                isReloading = false;
+                reloadTimer = 0;
+                burstShotsRemaining = 0;
+                isLaserFiring = false;
+                isScoped = false;
+
+                if (isInfiniteAmmo) {
+                    currentWeapon.ammo.mag = currentWeapon.mag;
+                    currentWeapon.ammo.total = 9999;
+                }
+            }
+        }
+
+        // --- FUNÇÕES DO MENU HACK ---
+
+        function checkPassword(e) {
+            // CORREÇÃO 4: Checa se o valor digitado corresponde à senha
+            if (e.target.value === SECRET_PASSWORD) {
+                playHackMenuSound();
+                document.getElementById('hack-menu').style.display = 'block';
+                document.getElementById('password-input').style.display = 'none';
+                e.target.value = 'HACK MODE ATIVADO';
+            }
+        }
+
+        function checkPausePassword(e) {
+            if (e.target.value === SECRET_PASSWORD) {
+                playHackMenuSound();
+                document.getElementById('hack-menu').style.display = 'block';
+                togglePause();
+            }
+        }
+
+        // ... (Outras funções de Hack e Utility mantidas) ...
+
+        function drawPlayer() {
+            if (!currentWeapon) return;
+
+            const dx = mousePos.x - PLAYER_CENTER_X;
+            const dy = mousePos.y - PLAYER_CENTER_Y;
+            const angle = Math.atan2(dy, dx);
+
+            const skinColor = isGodMode ? '#ff4444' : PLAYER_COLOR;
+            const skinDark = isGodMode ? '#cc2222' : '#8B7355';
+            const shirtColor = isGodMode ? '#880000' : '#2255aa';
+
+            const legLength = PLAYER_SIZE * 0.8;
+            const legWidth = PLAYER_SIZE * 0.2;
+            ctx.strokeStyle = skinDark;
+            ctx.lineWidth = legWidth;
+            ctx.fillStyle = skinDark;
+
+            const leftLegAngle = angle + Math.PI + Math.PI / 4;
+            const rightLegAngle = angle + Math.PI - Math.PI / 4;
+            const leftLegX = PLAYER_CENTER_X + Math.cos(leftLegAngle) * legLength;
+            const leftLegY = PLAYER_CENTER_Y + Math.sin(leftLegAngle) * legLength;
+            const rightLegX = PLAYER_CENTER_X + Math.cos(rightLegAngle) * legLength;
+            const rightLegY = PLAYER_CENTER_Y + Math.sin(rightLegAngle) * legLength;
+
+            ctx.beginPath();
+            ctx.moveTo(PLAYER_CENTER_X, PLAYER_CENTER_Y);
+            ctx.lineTo(leftLegX, leftLegY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(leftLegX, leftLegY, PLAYER_SIZE * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(PLAYER_CENTER_X, PLAYER_CENTER_Y);
+            ctx.lineTo(rightLegX, rightLegY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(rightLegX, rightLegY, PLAYER_SIZE * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+
+            const gunLength = 25;
+            const armLength = PLAYER_SIZE * 0.7;
+
+            const gunArmAngle = angle;
+            const gunArmX = PLAYER_CENTER_X + Math.cos(gunArmAngle) * armLength;
+            const gunArmY = PLAYER_CENTER_Y + Math.sin(gunArmAngle) * armLength;
+
+            ctx.strokeStyle = skinColor;
+            ctx.lineWidth = PLAYER_SIZE * 0.18;
+            ctx.beginPath();
+            ctx.moveTo(PLAYER_CENTER_X, PLAYER_CENTER_Y);
+            ctx.lineTo(gunArmX, gunArmY);
+            ctx.stroke();
+
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.arc(gunArmX, gunArmY, PLAYER_SIZE * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            const muzzleX = gunArmX + Math.cos(angle) * gunLength;
+            const muzzleY = gunArmY + Math.sin(angle) * gunLength;
+
+            ctx.strokeStyle = currentWeapon.color;
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(gunArmX, gunArmY);
+            ctx.lineTo(muzzleX, muzzleY);
+            ctx.stroke();
+
+            const otherArmAngle = angle + Math.PI / 2.5;
+            const otherArmX = PLAYER_CENTER_X + Math.cos(otherArmAngle) * (armLength * 0.7);
+            const otherArmY = PLAYER_CENTER_Y + Math.sin(otherArmAngle) * (armLength * 0.7);
+
+            ctx.strokeStyle = skinColor;
+            ctx.lineWidth = PLAYER_SIZE * 0.18;
+            ctx.beginPath();
+            ctx.moveTo(PLAYER_CENTER_X, PLAYER_CENTER_Y);
+            ctx.lineTo(otherArmX, otherArmY);
+            ctx.stroke();
+
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.arc(otherArmX, otherArmY, PLAYER_SIZE * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = shirtColor;
+            ctx.beginPath();
+            ctx.arc(PLAYER_CENTER_X, PLAYER_CENTER_Y, PLAYER_SIZE * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            const headX = PLAYER_CENTER_X + Math.cos(angle) * PLAYER_SIZE * 0.3;
+            const headY = PLAYER_CENTER_Y + Math.sin(angle) * PLAYER_SIZE * 0.3;
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.arc(headX, headY, PLAYER_SIZE * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#222';
+            const eyeOffset = PLAYER_SIZE * 0.25;
+            const eyeSize = PLAYER_SIZE * 0.1;
+            const leftEyeAngle = angle - Math.PI / 5;
+            const rightEyeAngle = angle + Math.PI / 5;
+            ctx.beginPath();
+            ctx.arc(headX + Math.cos(leftEyeAngle) * eyeOffset, headY + Math.sin(leftEyeAngle) * eyeOffset, eyeSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(headX + Math.cos(rightEyeAngle) * eyeOffset, headY + Math.sin(rightEyeAngle) * eyeOffset, eyeSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (shotCooldown > 0 && shotCooldown < currentWeapon.rate * 0.3 && currentWeapon.type !== 'laser') {
+                ctx.fillStyle = 'yellow';
+                ctx.beginPath();
+                ctx.arc(muzzleX, muzzleY, 3 + (currentWeapon.rate * 0.3 - shotCooldown) * 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Desenhar escudo neon vermelho ao redor do jogador
+            if (playerShield > 0) {
+                ctx.save();
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.shadowColor = '#ff0000';
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.arc(PLAYER_CENTER_X, PLAYER_CENTER_Y, PLAYER_SIZE + 12, 0, Math.PI * 2);
+                ctx.stroke();
+                // Barra de vida do escudo vermelho
+                const shieldBarWidth = 60;
+                const shieldBarHeight = 6;
+                const shieldBarX = PLAYER_CENTER_X - shieldBarWidth / 2;
+                const shieldBarY = PLAYER_CENTER_Y - PLAYER_SIZE - 25;
+                ctx.fillStyle = 'rgba(100, 0, 0, 0.8)';
+                ctx.fillRect(shieldBarX, shieldBarY, shieldBarWidth, shieldBarHeight);
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(shieldBarX, shieldBarY, shieldBarWidth * (playerShield / MAX_SHIELD_HP), shieldBarHeight);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${playerShield}`, PLAYER_CENTER_X, shieldBarY - 3);
+                ctx.restore();
+            }
+        }
+
+        function drawBigShotEffect(dt) {
+            if (bigShotEffect) {
+                bigShotEffect.timer -= dt;
+                if (bigShotEffect.timer > 0) {
+                    ctx.beginPath();
+                    ctx.arc(bigShotEffect.x, bigShotEffect.y, bigShotEffect.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 200, 0, ${bigShotEffect.timer * 5})`;
+                    ctx.fill();
+                } else {
+                    bigShotEffect = null;
+                }
+            }
+
+            // Desenhar o feixe gigante do Big Laser
+            if (bigLaserBeam) {
+                bigLaserBeam.timer -= dt;
+                if (bigLaserBeam.timer > 0) {
+                    const alpha = bigLaserBeam.timer / 0.3;
+
+                    // Calcular ângulo do feixe
+                    const angle = Math.atan2(bigLaserBeam.endY - bigLaserBeam.startY, bigLaserBeam.endX - bigLaserBeam.startX);
+
+                    // Desenhar feixe principal vermelho
+                    ctx.save();
+                    ctx.strokeStyle = `rgba(255, 0, 0, ${alpha})`;
+                    ctx.lineWidth = bigLaserBeam.width;
+                    ctx.lineCap = 'round';
+                    ctx.shadowColor = 'red';
+                    ctx.shadowBlur = 30 * alpha;
+                    ctx.beginPath();
+                    ctx.moveTo(bigLaserBeam.startX, bigLaserBeam.startY);
+                    ctx.lineTo(bigLaserBeam.endX, bigLaserBeam.endY);
+                    ctx.stroke();
+
+                    // Núcleo branco brilhante
+                    ctx.strokeStyle = `rgba(255, 200, 200, ${alpha})`;
+                    ctx.lineWidth = bigLaserBeam.width * 0.4;
+                    ctx.shadowBlur = 20 * alpha;
+                    ctx.beginPath();
+                    ctx.moveTo(bigLaserBeam.startX, bigLaserBeam.startY);
+                    ctx.lineTo(bigLaserBeam.endX, bigLaserBeam.endY);
+                    ctx.stroke();
+
+                    ctx.restore();
+                } else {
+                    bigLaserBeam = null;
+                }
+            }
+
+            // Efeito visual da Nuke
+            if (nukeEffect) {
+                const alpha = nukeEffect.timer / 0.5;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(nukeEffect.x, nukeEffect.y, nukeEffect.radius * (1.2 - alpha * 0.2), 0, Math.PI * 2);
+                const gradient = ctx.createRadialGradient(nukeEffect.x, nukeEffect.y, 0, nukeEffect.x, nukeEffect.y, nukeEffect.radius);
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+                gradient.addColorStop(0.3, `rgba(255, 100, 255, ${alpha * 0.8})`);
+                gradient.addColorStop(0.6, `rgba(255, 0, 100, ${alpha * 0.5})`);
+                gradient.addColorStop(1, `rgba(100, 0, 50, 0)`);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Renderizar partículas ultra-realistas (Sangue e Explosões)
+            if (typeof updateParticles === 'function') updateParticles(dt);
+            if (typeof drawParticles === 'function') drawParticles();
+        }
+
+        function drawHUD() {
+            document.getElementById('score-display').textContent = score.toString().padStart(6, '0');
+            document.getElementById('high-score-display').textContent = highScore.toString().padStart(6, '0');
+
+            const minutes = Math.floor(gameTime / 60);
+            const seconds = Math.floor(gameTime % 60);
+            document.getElementById('time-display').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            if (currentWeapon) {
+                let ammoText = '';
+                if (currentWeaponId === '1') {
+                    ammoText = `${currentWeapon.name} [${glockMode.toUpperCase()}]: ${Math.floor(currentWeapon.ammo.mag)}/∞`;
+                } else {
+                    ammoText = `${currentWeapon.name}: ${Math.floor(currentWeapon.ammo.mag)}/∞`;
+                }
+                if (isReloading) {
+                    ammoText += ` [RECARREGANDO ${reloadTimer.toFixed(1)}s]`;
+                }
+                // Mostrar paralisadores disponíveis
+                ammoText += ` | PARALIZADORES: ${isInfiniteAmmo ? '∞' : playerParalyzers}`;
+                // Mostrar paralisador ativo
+                if (parasitesParalyzed) {
+                    ammoText += ` | ATIVO: ${Math.ceil(paralyzeTimer)}s`;
+                }
+                // Mostrar torretas
+                if (turrets.length > 0 || placingTurret) {
+                    ammoText += ` | TORRETAS: ${turrets.length}/${MAX_TURRETS}`;
+                }
+                document.getElementById('ammo-display').textContent = ammoText;
+            }
+        }
+
+
+        function gameLoop(timestamp) {
+            if (lastTime === 0) lastTime = timestamp;
+            let dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            if (dt > 0.1) dt = 0.1;
+
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+            shotCooldown = Math.max(0, shotCooldown - dt);
+            nukeCooldown = Math.max(0, nukeCooldown - dt);
+
+            // Atualizar efeito visual da nuke
+            if (nukeEffect) {
+                nukeEffect.timer -= dt;
+                if (nukeEffect.timer <= 0) {
+                    nukeEffect = null;
+                }
+            }
+
+            // Auto-fire: dispara automaticamente enquanto o botão esquerdo está pressionado
+            if (isLeftMouseDown && shotCooldown === 0 && gameState === 'PLAYING' && !isReloading && currentWeapon.type !== 'laser' && currentWeapon.type !== 'nuke') {
+                if (currentWeapon.ammo.mag > 0 || isInfiniteAmmo) {
+                    if (glockMode === 'burst' && currentWeaponId === '1') {
+                        if (!isInfiniteAmmo) {
+                            currentWeapon.ammo.mag = Math.max(0, currentWeapon.ammo.mag - 5);
+                        }
+                        burstShotsRemaining = BURST_SHOTS;
+                        burstTimer = 0;
+                        shotCooldown = currentWeapon.rate / playerFireRateDebuff; // Aplica debuff
+                    } else {
+                        triggerSingleShot(mousePos.x, mousePos.y);
+                        if (currentWeapon.ammo.mag === 0) {
+                            startReload();
+                        }
+                    }
+                }
+            }
+
+            // CORREÇÃO 5: Lógica de Alertas (Mantém o boss-alert oculto se o timer acabar)
+            if (bossAlertTimer > 0) {
+                bossAlertTimer -= dt;
+                document.getElementById('boss-alert').style.display = 'block';
+                if (bossAlertTimer <= 0) {
+                    document.getElementById('boss-alert').style.display = 'none';
+                }
+            }
+
+            if (recordAlertTimer > 0) {
+                recordAlertTimer -= dt;
+                updateConfetti(dt);
+                if (recordAlertTimer <= 0) {
+                    document.getElementById('record-alert').style.display = 'none';
+                    confetti = [];
+                }
+            }
+
+            if (gameState === 'PLAYING') {
+                gameTime += dt;
+
+                if (currentWeaponId === '1' && glockMode === 'burst' && burstShotsRemaining > 0) {
+                    burstTimer += dt;
+                    if (burstTimer >= BURST_INTERVAL) {
+                        burstTimer = 0;
+                        triggerBurstShot(mousePos.x, mousePos.y);
+                        burstShotsRemaining--;
+                    }
+                }
+
+                if (isReloading && !isInfiniteAmmo) {
+                    reloadTimer -= dt;
+                    if (reloadTimer <= 0) finishReload();
+                }
+
+                if (currentWeapon.name === 'Laser' && isLaserFiring) {
+                    // Gastar munição em números inteiros
+                    if (!isInfiniteAmmo) {
+                        laserAmmoTimer += dt;
+                        if (laserAmmoTimer >= LASER_AMMO_RATE) {
+                            laserAmmoTimer = 0;
+                            currentWeapon.ammo.mag = Math.max(0, currentWeapon.ammo.mag - 1);
+                        }
+                    }
+                    if (currentWeapon.ammo.mag <= 0 && !isInfiniteAmmo) isLaserFiring = false;
+
+                    // Calcular direção do feixe
+                    const dx = mousePos.x - PLAYER_CENTER_X;
+                    const dy = mousePos.y - PLAYER_CENTER_Y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const dirX = dx / distance;
+                    const dirY = dy / distance;
+
+                    // Largura do feixe normal
+                    const beamWidth = 8;
+
+                    // Encontrar o primeiro parasita no caminho do feixe
+                    let closestHit = null;
+                    let closestDist = Infinity;
+
+                    for (let i = 0; i < parasites.length; i++) {
+                        const p = parasites[i];
+                        const distToBeam = pointToLineDistance(p.x, p.y, PLAYER_CENTER_X, PLAYER_CENTER_Y, mousePos.x, mousePos.y);
+
+                        // Verificar se está na direção certa
+                        const toParasiteDx = p.x - PLAYER_CENTER_X;
+                        const toParasiteDy = p.y - PLAYER_CENTER_Y;
+                        const dotProduct = toParasiteDx * dirX + toParasiteDy * dirY;
+                        const parasiteDist = Math.sqrt(toParasiteDx * toParasiteDx + toParasiteDy * toParasiteDy);
+
+                        if (distToBeam <= beamWidth / 2 + p.size / 2 && dotProduct > 0 && parasiteDist < closestDist) {
+                            closestHit = p;
+                            closestDist = parasiteDist;
+                        }
+                    }
+
+                    // Determinar ponto final do feixe
+                    let endX, endY;
+                    if (closestHit) {
+                        // Feixe para no parasita
+                        endX = closestHit.x;
+                        endY = closestHit.y;
+                    } else {
+                        // Feixe vai até o mouse
+                        endX = mousePos.x;
+                        endY = mousePos.y;
+                    }
+
+                    // Desenha o feixe laser
+                    ctx.save();
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = beamWidth;
+                    ctx.lineCap = 'round';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ff0000';
+                    ctx.beginPath();
+                    ctx.moveTo(PLAYER_CENTER_X, PLAYER_CENTER_Y);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+
+                    // Núcleo brilhante
+                    ctx.strokeStyle = '#ff6666';
+                    ctx.lineWidth = beamWidth * 0.4;
+                    ctx.beginPath();
+                    ctx.moveTo(PLAYER_CENTER_X, PLAYER_CENTER_Y);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // Causa dano contínuo no parasita atingido (50 de dano)
+                    laserHitTimer += dt;
+                    if (laserHitTimer >= LASER_HIT_RATE) {
+                        laserHitTimer = 0;
+                        playShootSound('Laser');
+                        if (closestHit) {
+                            applyDamage(closestHit, 50, false);
+                        }
+                    }
+                }
+
+                // LANÇA-CHAMAS LOGIC
+                if (currentWeapon.type === 'flamethrower' && isFlamethrowerFiring) {
+                    // Gastar munição
+                    if (!isInfiniteAmmo) {
+                        flameAmmoTimer += dt;
+                        if (flameAmmoTimer >= FLAME_AMMO_RATE) {
+                            flameAmmoTimer = 0;
+                            currentWeapon.ammo.mag = Math.max(0, currentWeapon.ammo.mag - 1);
+                        }
+                    }
+                    if (currentWeapon.ammo.mag <= 0 && !isInfiniteAmmo) isFlamethrowerFiring = false;
+
+                    // Som "FHOOOOOOOOOOOORL"
+                    flameSoundTimer += dt;
+                    if (flameSoundTimer >= 0.3) {
+                        flameSoundTimer = 0;
+                        playShootSound('Lança-Chamas');
+                    }
+
+                    // Calcular direção das chamas
+                    const dx = mousePos.x - PLAYER_CENTER_X;
+                    const dy = mousePos.y - PLAYER_CENTER_Y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const dirX = dx / distance;
+                    const dirY = dy / distance;
+
+                    // Criar partículas de fogo
+                    for (let i = 0; i < 3; i++) {
+                        const spread = (Math.random() - 0.5) * 0.4;
+                        const speed = 450 + Math.random() * 150;
+                        flameParticles.push({
+                            x: PLAYER_CENTER_X,
+                            y: PLAYER_CENTER_Y,
+                            vx: (dirX + spread) * speed,
+                            vy: (dirY + spread) * speed,
+                            life: 0.8 + Math.random() * 0.4,
+                            size: 18 + Math.random() * 12,
+                            color: Math.random() > 0.3 ? '#ff4500' : (Math.random() > 0.5 ? '#ff6600' : '#ffcc00')
+                        });
+                    }
+
+                    // Update e draw partículas de fogo
+                    for (let i = flameParticles.length - 1; i >= 0; i--) {
+                        const fp = flameParticles[i];
+                        fp.x += fp.vx * dt;
+                        fp.y += fp.vy * dt;
+                        fp.life -= dt;
+                        fp.size *= 0.98;
+
+                        if (fp.life <= 0 || fp.x < 0 || fp.x > WIDTH || fp.y < 0 || fp.y > HEIGHT) {
+                            flameParticles.splice(i, 1);
+                            continue;
+                        }
+
+                        // Desenhar partícula de fogo
+                        const alpha = Math.min(1, fp.life * 2);
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.fillStyle = fp.color;
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = fp.color;
+                        ctx.beginPath();
+                        ctx.arc(fp.x, fp.y, fp.size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
+                        // Verificar colisão com parasitas
+                        for (let j = 0; j < parasites.length; j++) {
+                            const p = parasites[j];
+                            const pdx = p.x - fp.x;
+                            const pdy = p.y - fp.y;
+                            const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+                            if (pdist < fp.size / 2 + p.size / 2) {
+                                flameHitTimer += dt;
+                                if (flameHitTimer >= FLAME_HIT_RATE) {
+                                    flameHitTimer = 0;
+                                    // Usar dano da partícula se for de torreta, senão usa FLAME_DPS
+                                    const flameDamage = fp.fromTurret ? (fp.damage || 15) : FLAME_DPS;
+                                    applyDamage(p, flameDamage, false);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    // Processar partículas de fogo (incluindo de torretas) quando jogador não está usando lança-chamas
+                    for (let i = flameParticles.length - 1; i >= 0; i--) {
+                        const fp = flameParticles[i];
+                        fp.x += fp.vx * dt;
+                        fp.y += fp.vy * dt;
+                        fp.life -= dt;
+                        fp.size *= 0.95;
+                        if (fp.life <= 0 || fp.x < 0 || fp.x > WIDTH || fp.y < 0 || fp.y > HEIGHT) {
+                            flameParticles.splice(i, 1);
+                            continue;
+                        }
+                        // Desenhar partícula
+                        const alpha = Math.min(1, fp.life * 2);
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.fillStyle = fp.color;
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = fp.color;
+                        ctx.beginPath();
+                        ctx.arc(fp.x, fp.y, fp.size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
+                        // Verificar colisão com parasitas (para torretas de fogo)
+                        if (fp.fromTurret) {
+                            for (let j = 0; j < parasites.length; j++) {
+                                const p = parasites[j];
+                                const pdx = p.x - fp.x;
+                                const pdy = p.y - fp.y;
+                                const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+                                if (pdist < fp.size / 2 + p.size / 2) {
+                                    const flameDamage = fp.damage || 100;
+                                    applyDamage(p, flameDamage, false);
+                                    flameParticles.splice(i, 1);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Aimbot (Lógica mantida) - Agora funciona com laser, lança-chamas, nuke e modo burst também
+                if (isAimbot && parasites.length > 0 && currentWeapon.ammo.mag > 0 && !isReloading) {
+                    const target = parasites.reduce((closest, p) => {
+                        return (!closest || p.distance < closest.distance) ? p : closest;
+                    }, null);
+
+                    if (target) {
+                        mousePos.x = target.x;
+                        mousePos.y = target.y;
+
+                        // Para o laser, aimbot move o mouse automaticamente
+                        if (currentWeapon.type === 'laser') {
+                            isLaserFiring = true;
+                        }
+                        // Para o lança-chamas, ativa o fogo automaticamente
+                        else if (currentWeapon.type === 'flamethrower') {
+                            isFlamethrowerFiring = true;
+                        }
+                        // Para a nuke, atira nuke no zumbi mais próximo
+                        else if (currentWeapon.type === 'nuke') {
+                            aimbotTimer = Math.max(0, aimbotTimer - dt);
+                            if (aimbotTimer === 0 && (nukeCooldown <= 0 || isInfiniteAmmo)) {
+                                if (!isInfiniteAmmo) {
+                                    currentWeapon.ammo.mag--;
+                                    nukeCooldown = NUKE_COOLDOWN_TIME;
+                                }
+                                playExplosionSound();
+                                const nukeRadius = 400;
+                                nukeEffect = {x: target.x, y: target.y, radius: nukeRadius, timer: 0.5};
+                                let hitCount = 0;
+                                for (let i = parasites.length - 1; i >= 0; i--) {
+                                    const p = parasites[i];
+                                    const dx = p.x - target.x;
+                                    const dy = p.y - target.y;
+                                    const dist = Math.sqrt(dx * dx + dy * dy);
+                                    if (dist <= nukeRadius + p.size / 2) {
+                                        applyDamage(p, 2000, false);
+                                        hitCount++;
+                                    }
+                                }
+                                addFloatingText(target.x, target.y, `NUKE! ${hitCount} HITS`, '#ff00ff');
+                                aimbotTimer = 1.0; // Cooldown do aimbot para nuke
+                            }
+                        }
+                        // Para outras armas, dispara normalmente
+                        else {
+                            aimbotTimer = Math.max(0, aimbotTimer - dt);
+                            if (aimbotTimer === 0) {
+                                const aimX = target.x;
+                                const aimY = target.y - target.size * 0.35;
+                                triggerSingleShot(aimX, aimY);
+                                aimbotTimer = AIMBOT_RATE;
+                            }
+                        }
+                    }
+                }
+
+                // Spawner
+                spawnTimer += dt;
+                if (spawnTimer > 1 / spawnRate && parasites.length < maxParasites) {
+                    spawnTimer = 0;
+                    spawnCount++;
+
+                    // Spawn de Horda a cada 3, 6, 10 parasitas (ciclo)
+                    const cycleCount = ((spawnCount - 1) % 15) + 1;
+
+                    if (cycleCount === 15) {
+                        // Super Horda (roxo) - grupo de 20
+                        playSuperHordeSound();
+                        spawnHordeGroup('SuperHorde', 20);
+                        addFloatingText(WIDTH / 2, 80, "SUPER HORDA CHEGANDO!", '#9933ff');
+                    } else if (HORDE_SPAWN_AT.includes(cycleCount)) {
+                        // Horda normal - grupo de 3, 5, 7, 9 ou 10
+                        playHordeSound();
+                        const groupSizes = [3, 5, 7, 9, 10];
+                        const groupSize = groupSizes[Math.floor(Math.random() * groupSizes.length)];
+                        spawnHordeGroup('Horde', groupSize);
+                        addFloatingText(WIDTH / 2, 80, `HORDA DE ${groupSize} CHEGANDO!`, 'yellow');
+                    } else {
+                        const rand = Math.random();
+                        if (rand < 0.15) {
+                            parasites.push(new Parasite('Runner'));
+                        } else if (rand < 0.25) {
+                            parasites.push(new Parasite('Slow'));
+                        } else {
+                            parasites.push(new Parasite('Common'));
+                        }
+                    }
+                }
+
+                // Spawn do Gigabucho a cada 1 minuto (mas não quando Necrolord está para spawnar)
+                bossSpawnTimer += dt;
+                const isNecrolordSpawnTime = necrolordSpawnTimer >= NECROLORD_SPAWN_INTERVAL - 3;
+                if (bossSpawnTimer >= BOSS_SPAWN_INTERVAL && !isNecrolordSpawnTime) {
+                    bossSpawnTimer = 0;
+                    if (!parasites.some(p => p.isBoss)) {
+                        playBossSound();
+                        parasites.push(new Parasite('Boss'));
+                        addFloatingText(WIDTH / 2, 100, "GIGABUCHO CHEGOU!", 'red');
+                    }
+                }
+
+                // Spawn do Necrolord a cada 2 minutos
+                necrolordSpawnTimer += dt;
+                if (necrolordSpawnTimer >= NECROLORD_SPAWN_INTERVAL - 3 && necrolordSpawnTimer < NECROLORD_SPAWN_INTERVAL && !necrolordAlertShown) {
+                    necrolordAlertShown = true;
+                    bossAlertTimer = 3.0;
+                    document.getElementById('boss-alert').textContent = 'CUIDADO! O NECROLORD ESTÁ CHEGANDO!';
+                    playBossSound();
+                }
+                if (necrolordSpawnTimer >= NECROLORD_SPAWN_INTERVAL) {
+                    necrolordSpawnTimer = 0;
+                    necrolordAlertShown = false;
+                    bossSpawnTimer = 0;
+                    if (!parasites.some(p => p.isNecrolord)) {
+                        parasites.push(new Parasite('Necrolord'));
+                        addFloatingText(WIDTH / 2, 100, "NECROLORD CHEGOU!", '#8B0000');
+                    }
+                }
+
+                // Spawn do Lagartão a cada 3 minutos (impede spawn de outros bosses)
+                const hasLagartao = parasites.some(p => p.isLagartao);
+                lagartaoSpawnTimer += dt;
+                if (lagartaoSpawnTimer >= LAGARTAO_SPAWN_INTERVAL - 3 && lagartaoSpawnTimer < LAGARTAO_SPAWN_INTERVAL && !lagartaoAlertShown) {
+                    lagartaoAlertShown = true;
+                    bossAlertTimer = 3.0;
+                    document.getElementById('boss-alert').textContent = 'CUIDADO! O LAGARTÃO ESTÁ CHEGANDO!';
+                    playBossSound();
+                }
+                if (lagartaoSpawnTimer >= LAGARTAO_SPAWN_INTERVAL) {
+                    lagartaoSpawnTimer = 0;
+                    lagartaoAlertShown = false;
+                    if (!hasLagartao) {
+                        parasites.push(new Parasite('Lagartao'));
+                        addFloatingText(WIDTH / 2, 100, "LAGARTÃO CHEGOU!", '#00ff00');
+                    }
+                }
+
+                // Enquanto Lagartão está vivo, não spawna Gigabucho nem Necrolord
+                if (hasLagartao) {
+                    bossSpawnTimer = 0;
+                    necrolordSpawnTimer = 0;
+                }
+
+                // Lógica especial do Lagartão - Atira tiro mortal super lento quando HP <= 5000
+                for (let i = parasites.length - 1; i >= 0; i--) {
+                    const p = parasites[i];
+                    if (p.isLagartao && p.health <= 5000) {
+                        p.slimeTimer += dt;
+                        if (p.slimeTimer >= 4.0) { // Atira a cada 4 segundos
+                            p.slimeTimer = 0;
+                            // Cria projétil mortal super lento em direção ao jogador
+                            const dx = PLAYER_CENTER_X - p.x;
+                            const dy = PLAYER_CENTER_Y - p.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            projectiles.push({
+                                x: p.x,
+                                y: p.y,
+                                vx: (dx / dist) * 80,
+                                vy: (dy / dist) * 80,
+                                size: 25,
+                                damage: 0,
+                                isDeadlyShot: true,
+                                color: '#ff0000',
+                                life: 15.0,
+                                hitPoints: 3,
+                                trail: []
+                            });
+                            addFloatingText(p.x, p.y - 30, 'TIRO MORTAL!', '#ff0000');
+                            playBossSound();
+                        }
+                    }
+                }
+
+                // Lógica especial do Necrolord - Spawna 30 Lordzinhos quando HP <= 5000
+                for (let i = parasites.length - 1; i >= 0; i--) {
+                    const p = parasites[i];
+                    if (p.isNecrolord && p.health <= 5000 && !p.hasSpawnedMinions) {
+                        p.hasSpawnedMinions = true;
+                        addFloatingText(p.x, p.y - 50, 'LORDZINHOS! AJUDEM-ME!', '#8B0000');
+                        for (let j = 0; j < 30; j++) {
+                            const minion = new Parasite('Lordzinho');
+                            minion.x = p.x + (Math.random() - 0.5) * 100;
+                            minion.y = p.y + (Math.random() - 0.5) * 100;
+                            parasites.push(minion);
+                        }
+                    }
+                }
+
+                // Atualizar debuff de taxa de tiro
+                if (fireRateDebuffTimer > 0) {
+                    fireRateDebuffTimer -= dt;
+                    if (fireRateDebuffTimer <= 0) {
+                        playerFireRateDebuff = 1.0;
+                        addFloatingText(WIDTH / 2, HEIGHT / 2, 'TAXA DE TIRO NORMALIZADA!', '#00ff00');
+                    }
+                }
+
+
+                // Atualizar e desenhar partículas de sangue
+                for (let i = bloodParticles.length - 1; i >= 0; i--) {
+                    const bp = bloodParticles[i];
+                    bp.x += bp.vx * dt;
+                    bp.y += bp.vy * dt;
+                    bp.life -= dt;
+                    bp.vx *= 0.98;
+                    bp.vy *= 0.98;
+                    if (bp.life <= 0) {
+                        bloodParticles.splice(i, 1);
+                        continue;
+                    }
+                    const alpha = Math.min(1, bp.life);
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = bp.color || '#8B0000'; // Usa cor customizada se existir
+                    ctx.beginPath();
+                    ctx.arc(bp.x, bp.y, bp.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Atualizar cooldown do escudo
+                if (shieldDamageCooldown > 0) {
+                    shieldDamageCooldown -= dt;
+                }
+
+                // Atualizar timer de paralisador global
+                if (parasitesParalyzed) {
+                    paralyzeTimer -= dt;
+                    if (paralyzeTimer <= 0) {
+                        parasitesParalyzed = false;
+                        // Desparalisa todos
+                        for (const p of parasites) {
+                            if (p.stunTimer > 0) p.stunTimer = 0;
+                            p.isStunned = false;
+                        }
+                        addFloatingText(WIDTH / 2, HEIGHT / 2, 'PARALISADOR ACABOU!', '#ff00ff');
+                    }
+                }
+
+                // Atualizar e desenhar torretas
+                for (const turret of turrets) {
+                    turret.update(dt);
+                    turret.draw();
+                }
+
+                // ATUALIZAÇÃO E DESENHO DOS PARASITAS
+                for (let i = parasites.length - 1; i >= 0; i--) {
+                    const parasite = parasites[i];
+                    parasite.update(dt);
+                    parasite.draw();
+
+                    // Desenhar efeito de stun
+                    if (parasite.isStunned) {
+                        ctx.strokeStyle = '#00ffff';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(parasite.x, parasite.y, parasite.size * 0.6, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+
+                updateProjectiles(dt);
+
+                drawProjectiles();
+                drawBigShotEffect(dt);
+
+                drawPlayer();
+                updateFloatingTexts(dt);
+                drawFloatingTexts();
+
+            } else if (gameState === 'GAMEOVER') {
+                checkHighScore();
+                for (let i = 0; i < parasites.length; i++) {
+                    parasites[i].draw();
+                }
+                drawPlayer();
+                drawFloatingTexts();
+
+                drawGameOverOverlay();
+            }
+
+            if (gameState === 'PAUSED') {
+                for (let i = 0; i < parasites.length; i++) {
+                    parasites[i].draw();
+                }
+                drawPlayer();
+                drawFloatingTexts();
+            }
+
+            if (recordAlertTimer > 0) {
+                drawConfetti();
+            }
+
+            drawHUD();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // === INICIALIZAÇÃO ===
+        window.onload = () => {
+            initializeWeapons();
+            document.getElementById('high-score-display').textContent = highScore.toString().padStart(6, '0');
+
+            const restartContainer = document.getElementById('restart-container');
+            restartContainer.style.position = 'absolute';
+            restartContainer.style.top = `${canvas.offsetTop}px`;
+            restartContainer.style.left = `${canvas.offsetLeft}px`;
+            restartContainer.style.width = `${WIDTH}px`;
+            restartContainer.style.height = `${HEIGHT}px`;
+            restartContainer.style.pointerEvents = 'none';
+
+            requestAnimationFrame(gameLoop);
+
+            document.addEventListener('keydown', handleInput);
+
+            // CORREÇÃO DEFINITIVA: Áudio separado da lógica de mira
+            canvas.addEventListener('mousedown', (e) => {
+                // Parte do Áudio: Só mexe se não estiver mutado
+                if (!isMusicMuted) {
+                    initAudio();
+                    if (!bgMusicPlaying) playBackgroundMusic();
+                }
+
+                // Parte do Tiro e Mira: Passa o evento 'e' para a função
+                handleLaserShot(e);
+            });
+
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.oncontextmenu = (e) => e.preventDefault();
+
+            // CORREÇÃO 4: Garantir que o event listener está correto no passwordInput
+            const passwordInput = document.getElementById('password');
+            if (passwordInput) {passwordInput.addEventListener('input', checkPassword);}
+
+            const pausePasswordInput = document.getElementById('pause-password');
+            if (pausePasswordInput) {pausePasswordInput.addEventListener('input', checkPausePassword);}
+            document.getElementById('zombie-speed').value = currentParasiteSpeed;
+            document.getElementById('zombie-max').value = maxParasites;
+        };
+
+        // Função para fechar o menu hack (hacks continuam ativos, precisa da senha para reabrir)
+        function closeHackMenu() {
+            document.getElementById('hack-menu').style.display = 'none';
+            // Reseta os campos de senha para que o usuário precise digitar novamente
+            const passwordInputContainer = document.getElementById('password-input');
+            const passwordInput = document.getElementById('password');
+            if (passwordInputContainer) {
+                passwordInputContainer.style.display = 'block';
+            }
+            if (passwordInput) {
+                passwordInput.value = '';
+            }
+            const pausePasswordInput = document.getElementById('pause-password');
+            if (pausePasswordInput) {
+                pausePasswordInput.value = '';
+            }
+        }
+
+        // Funções Auxiliares (Não relevantes para os bugs principais, apenas para completar o código)
+        function spawnSpecificParasite(type) {if (type === 'Boss' && parasites.filter(p => p.isBoss).length > 0) {addFloatingText(WIDTH / 2, 50, "GIGABUCHO JÁ ESTÁ NA ÁREA!", 'red'); return;} if (type === 'Necrolord' && parasites.filter(p => p.isNecrolord).length > 0) {addFloatingText(WIDTH / 2, 50, "NECROLORD JÁ ESTÁ NA ÁREA!", '#8B0000'); return;} parasites.push(new Parasite(type)); addFloatingText(WIDTH / 2, 50, `SPAWN: ${type.toUpperCase()}`, 'orange');}
+
+        function spawnHordeGroup(type, count) {
+            const spawnSide = Math.floor(Math.random() * 4);
+            let baseX, baseY;
+
+            if (spawnSide === 0) {baseX = 0; baseY = Math.random() * HEIGHT;}
+            else if (spawnSide === 1) {baseX = WIDTH; baseY = Math.random() * HEIGHT;}
+            else if (spawnSide === 2) {baseX = Math.random() * WIDTH; baseY = 0;}
+            else {baseX = Math.random() * WIDTH; baseY = HEIGHT;}
+
+            for (let i = 0; i < count; i++) {
+                const p = new Parasite(type);
+                p.x = baseX + (Math.random() - 0.5) * 60;
+                p.y = baseY + (Math.random() - 0.5) * 60;
+                p.groupOffsetX = (Math.random() - 0.5) * 30;
+                p.groupOffsetY = (Math.random() - 0.5) * 30;
+                parasites.push(p);
+            }
+        }
+        function setParasiteSpeed(value) {currentParasiteSpeed = parseInt(value); currentGiantSpeed = currentParasiteSpeed / 2;}
+        function setMaxParasites(value) {maxParasites = parseInt(value);}
+        function toggleGodMode() {isGodMode = !isGodMode; const button = document.getElementById('god-mode-btn'); button.textContent = isGodMode ? "GOD MODE: ATIVADO" : "GOD MODE: DESATIVADO"; button.style.backgroundColor = isGodMode ? 'green' : '#f00';}
+        function toggleAimbot() {isAimbot = !isAimbot; const button = document.getElementById('aimbot-btn'); button.textContent = isAimbot ? "AIMBOT: ATIVADO" : "AIMBOT: DESATIVADO"; button.style.backgroundColor = isAimbot ? 'green' : '#f00'; aimbotTimer = 0;}
+        function toggleInfiniteAmmo() {isInfiniteAmmo = !isInfiniteAmmo; const button = document.getElementById('infinite-ammo-btn'); button.textContent = isInfiniteAmmo ? "MUNIÇÃO INFINITA: ATIVADO" : "MUNIÇÃO INFINITA: DESATIVADO"; button.style.backgroundColor = isInfiniteAmmo ? 'green' : '#f00'; if (isInfiniteAmmo) {currentWeapon.ammo.mag = currentWeapon.mag; currentWeapon.ammo.total = 9999; isReloading = false;} else {currentWeapon.ammo.total = initialWeaponsState[currentWeaponId].total;} updateMobileButtons();}
+        function toggleImmortalTurrets() {isImmortalTurrets = !isImmortalTurrets; const button = document.getElementById('immortal-turrets-btn'); button.textContent = isImmortalTurrets ? "TORRETAS IMORTAIS: ATIVADO" : "TORRETAS IMORTAIS: DESATIVADO"; button.style.backgroundColor = isImmortalTurrets ? 'green' : '#f00';}
+        function toggleImmortalShield() {isImmortalShield = !isImmortalShield; const button = document.getElementById('immortal-shield-btn'); button.textContent = isImmortalShield ? "ESCUDO IMORTAL: ATIVADO" : "ESCUDO IMORTAL: DESATIVADO"; button.style.backgroundColor = isImmortalShield ? 'green' : '#f00';}
+        function addScore(amount) {score += amount; addFloatingText(WIDTH / 2, HEIGHT / 2, `+${amount} (CHEAT)`, 'lime');}
+        function addFloatingText(x, y, text, color = 'white') {floatingTexts.push({x, y, text, color, lifetime: 1.0, vy: -30});}
+        function updateFloatingTexts(dt) {for (let i = floatingTexts.length - 1; i >= 0; i--) {const ft = floatingTexts[i]; ft.lifetime -= dt; ft.y += ft.vy * dt; ft.vy += 100 * dt; if (ft.lifetime <= 0) {floatingTexts.splice(i, 1);} } }
+        function drawFloatingTexts() {ctx.textAlign = 'center'; ctx.font = 'bold 15px Consolas'; floatingTexts.forEach(ft => {const alpha = Math.max(0, ft.lifetime / 1.0); ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`; ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.8})`; ctx.lineWidth = 2; ctx.strokeText(ft.text, ft.x, ft.y); ctx.fillStyle = ft.color; ctx.fillText(ft.text, ft.x, ft.y);}); ctx.textAlign = 'left';}
+        function createConfetti() {for (let i = 0; i < 50; i++) {confetti.push({x: Math.random() * WIDTH, y: -Math.random() * HEIGHT, size: Math.random() * 8 + 3, color: `hsl(${Math.random() * 360}, 100%, 50%)`, vx: (Math.random() - 0.5) * 100, vy: Math.random() * 100 + 100, life: Math.random() * 3 + 2});} }
+        function updateConfetti(dt) {for (let i = confetti.length - 1; i >= 0; i--) {const c = confetti[i]; c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 200 * dt; c.life -= dt; if (c.y > HEIGHT || c.life <= 0) {confetti.splice(i, 1);} } }
+        function drawConfetti() {confetti.forEach(c => {ctx.fillStyle = c.color; ctx.fillRect(c.x, c.y, c.size, c.size);});}
+        function togglePause() {if (gameState === 'PLAYING') {gameState = 'PAUSED'; document.getElementById('pause-menu').style.display = 'block';} else if (gameState === 'PAUSED') {gameState = 'PLAYING'; document.getElementById('pause-menu').style.display = 'none'; document.getElementById('pause-password').value = '';} }
+        function handleInput(e) {if (gameState === 'PAUSED' && document.activeElement.id === 'pause-password') {if (e.keyCode !== 8 && e.keyCode !== 13) {if (e.key === 'Escape') {e.preventDefault();} } return;} if (e.key === 'Escape') {togglePause();} if (gameState === 'PLAYING') {if (e.key >= '1' && e.key <= '9') {switchWeapon(e.key);} else if (e.key === 'Shift') {toggleGlockMode();} else if (e.key.toLowerCase() === 'g') {cycleTurretAmmo();} else if (e.key.toLowerCase() === 't') {if (placingTurret) {placingTurret = false; addFloatingText(WIDTH / 2, HEIGHT / 2, 'MODO TORRETA: DESATIVADO', 'orange');} else {placeTurretAtMouse();} } else if (e.key.toLowerCase() === 'y') {removeTurretAtMouse();} else if (e.key.toLowerCase() === 'r') {startReload();} else if (e.key.toLowerCase() === 'p') {useParalyzer();} } }
+        function placeTurretAtMouse() {
+            if (!isInfiniteAmmo && playerTurretCount <= 0) {
+                addFloatingText(WIDTH / 2, HEIGHT / 2, 'SEM TORRETAS! MATE O NECROLORD!', 'red');
+                return;
+            }
+            if (turrets.length >= MAX_TURRETS) {
+                addFloatingText(WIDTH / 2, HEIGHT / 2, 'MÁXIMO DE TORRETAS ATIVAS!', 'red');
+                return;
+            }
+            if (!isInfiniteAmmo) playerTurretCount--;
+            turrets.push(new Turret(mousePos.x, mousePos.y, turretAmmoType));
+            const remainingText = isInfiniteAmmo ? '∞' : playerTurretCount;
+            addFloatingText(mousePos.x, mousePos.y, `TORRETA ${turretAmmoType.toUpperCase()} - Restam: ${remainingText}`, getTurretColor(turretAmmoType));
+        }
+        function removeTurretAtMouse() {let closest = null; let closestDist = 50; for (let i = 0; i < turrets.length; i++) {const t = turrets[i]; const dist = Math.sqrt((t.x - mousePos.x) ** 2 + (t.y - mousePos.y) ** 2); if (dist < closestDist) {closestDist = dist; closest = i;} } if (closest !== null) {turrets.splice(closest, 1); addFloatingText(mousePos.x, mousePos.y, 'TORRETA REMOVIDA', 'red');} else {addFloatingText(mousePos.x, mousePos.y, 'NENHUMA TORRETA PRÓXIMA', 'orange');} }
+        function useParalyzer() {if (!isInfiniteAmmo && playerParalyzers <= 0) {addFloatingText(WIDTH / 2, HEIGHT / 2, 'SEM PARALIZADORES!', 'red'); return;} if (!isInfiniteAmmo) playerParalyzers--; parasitesParalyzed = true; paralyzeTimer = PARALYZE_DURATION; const remainingText = isInfiniteAmmo ? '∞' : playerParalyzers; addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 50, `PARALISADOR ATIVADO! (${PARALYZE_DURATION}s) - Restam: ${remainingText}`, '#ff00ff'); playExplosionSound(); for (const parasite of parasites) {parasite.isStunned = true; parasite.stunTimer = PARALYZE_DURATION;} }
+        function cycleTurretAmmo() {const idx = TURRET_AMMO_TYPES.indexOf(turretAmmoType); turretAmmoType = TURRET_AMMO_TYPES[(idx + 1) % TURRET_AMMO_TYPES.length]; addFloatingText(WIDTH / 2, HEIGHT / 2 + 80, `TORRETA: ${turretAmmoType.toUpperCase()}`, getTurretColor(turretAmmoType));}
+        function getTurretColor(type) {const colors = {minigun: '#ff5555', rpg: '#ffff00', flamethrower: '#ff4500', stun: '#00ffff', laser: '#ff00ff'}; return colors[type] || '#ffffff';}
+        function toggleGlockMode() {if (currentWeaponId === '1') {glockMode = (glockMode === 'semi' ? 'burst' : 'semi'); addFloatingText(WIDTH / 2, HEIGHT / 2 + 50, `GLOCK: MODO ${glockMode.toUpperCase()}`, 'cyan');} }
+        function startReload() {if (currentWeapon.ammo.mag < currentWeapon.mag && !isReloading) {isReloading = true; reloadTimer = currentWeapon.reloadTime;} }
+        function finishReload() {currentWeapon.ammo.mag = currentWeapon.mag; isReloading = false;}
+        function checkHighScore() {if (score > highScore) {highScore = score; localStorage.setItem('highScore', highScore); recordAlertTimer = RECORD_ALERT_DURATION; createConfetti(); const alertElement = document.getElementById('record-alert'); alertElement.textContent = "VOCÊ BATEU SEU RECORDE!"; alertElement.style.display = 'block';} }
+        function updateMobileButtons() {
+            const paralyzerCount = document.getElementById('paralyzer-count');
+            const shieldCount = document.getElementById('shield-count');
+            const turretCount = document.getElementById('turret-count');
+
+            if (paralyzerCount) {
+                paralyzerCount.textContent = isInfiniteAmmo ? '∞' : playerParalyzers;
+            }
+            if (shieldCount) {
+                shieldCount.textContent = isInfiniteAmmo ? '∞' : playerShieldCount;
+            }
+            if (turretCount) {
+                turretCount.textContent = isInfiniteAmmo ? '∞' : playerTurretCount;
+            }
+        }
+
+        // Funções de controle de áudio
+        function setEffectsVolume(value) {
+            effectsVolume = value / 100;
+        }
+
+        function toggleMuteMusic() {
+            isMusicMuted = !isMusicMuted;
+            const btn = document.getElementById('mute-music-btn');
+            if (isMusicMuted) {
+                stopBackgroundMusic();
+                btn.textContent = 'MÚSICA: OFF';
+                btn.style.borderColor = '#f00';
+            } else {
+                playBackgroundMusic();
+                btn.textContent = 'MÚSICA: ON';
+                btn.style.borderColor = '#666';
+            }
+        }
+        function toggleManual() {
+            const manual = document.getElementById('manual-menu');
+            if (manual.style.display === 'none') {
+                manual.style.display = 'block';
+                if (gameState === 'PLAYING') gameState = 'PAUSED';
+            } else {
+                manual.style.display = 'none';
+                if (gameState === 'PAUSED') gameState = 'PLAYING';
+            }
+        }
+        function setTurretAmmo(type) {
+            turretAmmoType = type;
+            playButtonClickSound();
+            if (typeof turrets !== 'undefined') {
+                for (const t of turrets) {
+                    t.ammoType = type;
+                }
+            }
+        }
+
+        function useShield() {
+            if (playerShield > 0) {
+                addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 50, `ESCUDO JÁ ATIVO: ${playerShield} HP`, '#ff0000');
+                return;
+            }
+            if (!isInfiniteAmmo && playerShieldCount <= 0) {
+                addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 50, 'SEM ESCUDOS DISPONÍVEIS!', 'red');
+                return;
+            }
+            if (!isInfiniteAmmo) playerShieldCount--;
+            playerShield = MAX_SHIELD_HP;
+            const remainingText = isInfiniteAmmo ? '∞' : playerShieldCount;
+            addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 50, `ESCUDO ATIVADO! (${MAX_SHIELD_HP} HP) - Restam: ${remainingText}`, '#ff0000');
+            playButtonClickSound();
+            updateMobileButtons();
+        }
+        setInterval(updateMobileButtons, 100);
+        function restartGame() {score = 0; totalDamage = 0; parasites = []; gameTime = 0; spawnTimer = 0; spawnCount = 0; bossSpawnTimer = 0; necrolordSpawnTimer = 0; necrolordAlertShown = false; lagartaoSpawnTimer = 0; lagartaoAlertShown = false; playerFireRateDebuff = 1.0; fireRateDebuffTimer = 0; playerTurretCount = 0; isLaserFiring = false; isFlamethrowerFiring = false; flameParticles = []; bloodParticles = []; burstShotsRemaining = 0; confetti = []; recordAlertTimer = 0; nukeCooldown = 0; turrets = []; playerShield = 0; playerShieldCount = 0; shieldDamageCooldown = 0; parasitesParalyzed = false; paralyzeTimer = 0; placingTurret = false; playerParalyzers = 0; document.getElementById('record-alert').style.display = 'none'; initializeWeapons(); gameState = 'PLAYING'; if (!isMusicMuted) playBackgroundMusic(); const restartContainer = document.getElementById('restart-container'); restartContainer.style.pointerEvents = 'none'; while (restartContainer.firstChild) {restartContainer.removeChild(restartContainer.firstChild);} updateMobileButtons();}
+        let restartButtonTimer = 0;
+        let restartButtonReady = false;
+
+        function drawGameOverOverlay() {
+            const centerX = WIDTH / 2;
+            const centerY = HEIGHT / 2;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            ctx.fillStyle = '#f00';
+            ctx.font = '50px Consolas';
+            ctx.textAlign = 'center';
+            ctx.fillText('PERDEU! KKKKKK', centerX, centerY - 30);
+            ctx.font = '30px Consolas';
+            ctx.fillText(`SCORE FINAL: ${score.toString().padStart(6, '0')}`, centerX, centerY + 20);
+
+            let restartBtn = document.getElementById('restart-button');
+            const restartContainer = document.getElementById('restart-container');
+
+            if (!restartBtn) {
+                restartBtn = document.createElement('button');
+                restartBtn.id = 'restart-button';
+                restartBtn.textContent = '3';
+                restartBtn.style.backgroundColor = '#888';
+                restartBtn.style.cursor = 'not-allowed';
+                restartBtn.style.minWidth = '280px';
+                restartBtn.disabled = true;
+                restartContainer.appendChild(restartBtn);
+                restartContainer.style.pointerEvents = 'auto';
+                restartButtonTimer = 0;
+                restartButtonReady = false;
+            }
+
+            if (!restartButtonReady) {
+                restartButtonTimer += 1 / 60;
+                const remaining = Math.ceil(3 - restartButtonTimer);
+                if (remaining > 0) {
+                    restartBtn.textContent = remaining.toString();
+                }
+                if (restartButtonTimer >= 3) {
+                    restartButtonReady = true;
+                    restartBtn.textContent = 'Quer Jogar De Novo?';
+                    restartBtn.style.backgroundColor = '#4CAF50';
+                    restartBtn.style.cursor = 'pointer';
+                    restartBtn.disabled = false;
+                    restartBtn.onclick = restartGame;
+                }
+            }
+
+            restartBtn.style.position = 'absolute';
+            restartBtn.style.top = `${centerY + 80}px`;
+            restartBtn.style.left = `50%`;
+            restartBtn.style.transform = `translateX(-50%)`;
+        }
+
+        function createExplosion(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 200 + 50;
+                debrisParticles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.8 + Math.random() * 0.4,
+                    size: Math.random() * 6 + 2,
+                    color: color || '#ff0000'
+                });
+            }
+        }
+
+        function createBlood(x, y, count = 20) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 150 + 30;
+                bloodParticles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0 + Math.random() * 0.5,
+                    size: Math.random() * 3 + 1,
+                    color: '#8B0000'
+                });
+            }
+        }
+
+        function updateParticles(dt) {
+            for (let i = bloodParticles.length - 1; i >= 0; i--) {
+                const p = bloodParticles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 400 * dt;
+                p.life -= dt;
+                if (p.life <= 0) bloodParticles.splice(i, 1);
+            }
+            for (let i = debrisParticles.length - 1; i >= 0; i--) {
+                const p = debrisParticles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt;
+                p.size *= 0.96;
+                if (p.life <= 0) debrisParticles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            ctx.save();
+            for (const p of bloodParticles) {
+                ctx.globalAlpha = Math.min(1, p.life * 2);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            for (const p of debrisParticles) {
+                ctx.globalAlpha = Math.min(1, p.life * 2);
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = p.color;
+                ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+            }
+            ctx.restore();
+        }
+
+        function playParasiteHitSound() {
+            initAudio();
+            if (!audioContext) return;
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume * 0.3, audioContext.currentTime);
+            osc.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+            const now = audioContext.currentTime;
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.05);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        }
+
+        function playParasiteDeathSound() {
+            initAudio();
+            if (!audioContext) return;
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const effectsGain = audioContext.createGain();
+            effectsGain.gain.setValueAtTime(effectsVolume * masterVolume * 0.5, audioContext.currentTime);
+            osc.connect(gainNode);
+            gainNode.connect(effectsGain);
+            effectsGain.connect(audioContext.destination);
+            const now = audioContext.currentTime;
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(60, now);
+            osc.frequency.exponentialRampToValueAtTime(20, now + 0.15);
+            gainNode.gain.setValueAtTime(0.15, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        }
+
+        function applyDamage(p, damage, isHeadshot) {
+            p.hitTimer = 0.1;
+            const finalDamage = isHeadshot ? damage * 2 : damage;
+            totalDamage += finalDamage;
+            p.health -= finalDamage;
+            
+            createBlood(p.x, p.y, isHeadshot ? 10 : 3);
+
+            if (p.health <= 0) {
+                playParasiteDeathSound();
+                createExplosion(p.x, p.y, p.color, 20);
+                createBlood(p.x, p.y, 40);
+                
+                const baseScore = p.isBoss ? 5000 : (p.isNecrolord ? 10000 : (p.isGiant ? 500 : (p.isHorde ? 200 : 100)));
+                const headshotBonus = isHeadshot ? 50 : 0;
+                const totalScore = baseScore + headshotBonus;
+                score += totalScore;
+                const text = isHeadshot ? `+${totalScore} HEADSHOT!` : `+${totalScore}`;
+                addFloatingText(p.x, p.y, text, isHeadshot ? 'yellow' : 'white');
+
+                if (p.isBoss) {
+                    playerParalyzers += 5;
+                    addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 50, '+5 PARALIZADORES!', '#ff00ff');
+                    playButtonClickSound();
+                }
+
+                if (p.isNecrolord) {
+                    playerTurretCount += 10;
+                    addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 50, '+10 TORRETAS!', '#00ff00');
+                    playExplosionSound();
+                }
+
+                if (p.isLagartao) {
+                    playerShieldCount += 10;
+                    addFloatingText(PLAYER_CENTER_X, PLAYER_CENTER_Y - 50, '+10 ESCUDOS!', '#ff0000');
+                    playExplosionSound();
+                    updateMobileButtons();
+                }
+
+                parasites.splice(parasites.indexOf(p), 1);
+            } else {
+                playParasiteHitSound();
+            }
+            addFloatingText(p.x, p.y - 15, `-${Math.round(finalDamage)}`, isHeadshot ? 'orange' : 'red');
+        }
+    </script>
+</body>
+
+</html>
